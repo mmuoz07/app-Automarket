@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>AutoMarket - Compra Venta de Coches</display-name>
+
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+
+    <!-- REGISTRO DEL SERVLET (Esto es lo que te falta) -->
+    <servlet>
+        <servlet-name>CocheController</servlet-name>
+        <!-- Asegúrate de que esta ruta coincida exactamente con tu paquete Java -->
+        <servlet-class>com.modelo.controller.BuscarCochesServlet</servlet-class>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>CocheController</servlet-name>
+        <url-pattern>/CocheController</url-pattern>
+    </servlet-mapping>
+
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+
+</web-app>
