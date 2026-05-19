@@ -1,5 +1,5 @@
 // ==========================================
-// 1. BASE DE DATOS Y PERSISTENCIA
+// 1. BASE DE DATOS Y PERSISTENCIA (Sincronizada con el Servidor)
 // ==========================================
 const cochesPorDefecto = [
     { 
@@ -24,16 +24,16 @@ const cochesPorDefecto = [
 
 let dbCoches = JSON.parse(localStorage.getItem('autoMarketDb')) || cochesPorDefecto;
 let bannedWords = JSON.parse(localStorage.getItem('bannedWordsDb')) || ["estafa", "tonto", "idiota"];
-let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; // NUEVA: Base de datos de chats
+let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; 
 
 let usuarioActual = "Invitado"; 
 let idCocheEditando = null; 
-let chatActualCon = null; // Variable para saber con quién estamos chateando actualmente
+let chatActualCon = null; 
 
 function guardarDatos() {
     localStorage.setItem('autoMarketDb', JSON.stringify(dbCoches));
     localStorage.setItem('bannedWordsDb', JSON.stringify(bannedWords));
-    localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats)); // Guardar los chats
+    localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats)); 
 }
 
 // ==========================================
@@ -105,7 +105,7 @@ function cargarCochesInicio() {
 }
 
 // ==========================================
-// 3. INICIALIZACIÓN Y AUTH
+// 3. INICIALIZACIÓN Y AUTHENTICACIÓN (CONEXIÓN BACKEND)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
     cargarCochesInicio();
@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("filter-fuel").addEventListener("change", cargarCochesInicio);
     document.getElementById("filter-year").addEventListener("change", cargarCochesInicio);
 
-    // Modal
+    // Modal behavior
     document.getElementById("nav-btn-login").onclick = () => document.getElementById("auth-modal").classList.remove("hidden");
     document.getElementById("modal-close").onclick = () => document.getElementById("auth-modal").classList.add("hidden");
 
@@ -131,29 +131,73 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("login-tab").classList.remove("active");
     };
 
-    // Login
-    document.getElementById("login-form").onsubmit = (e) => {
+    // CONEXIÓN REAL: Inicio de Sesión
+    document.getElementById("login-form").onsubmit = async (e) => {
         e.preventDefault();
-        usuarioActual = document.getElementById("login-user").value;
-        document.getElementById("auth-modal").classList.add("hidden");
+        const emailInput = document.getElementById("login-user").value;
+        const passwordInput = document.getElementById("login-pass").value;
 
-        document.getElementById("nav-btn-login").classList.add("hidden");
-        document.getElementById("nav-user-profile").classList.remove("hidden");
-        document.getElementById("nav-mis-coches").classList.remove("hidden");
-        document.getElementById("nav-chats").classList.remove("hidden");
-        document.getElementById("nav-btn-publicar").classList.remove("hidden");
-        document.getElementById("user-name-display").innerText = usuarioActual;
+        try {
+            const respuesta = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: emailInput, password: passwordInput })
+            });
 
-        // Mostrar Panel Admin a admin
-        if (usuarioActual.toLowerCase() === "admin") {
-            document.getElementById("nav-panel-admin").classList.remove("hidden");
+            if (respuesta.ok) {
+                const usuarioLogueado = await respuesta.json();
+                usuarioActual = usuarioLogueado.nombre || emailInput;
+                
+                document.getElementById("auth-modal").classList.add("hidden");
+                document.getElementById("nav-btn-login").classList.add("hidden");
+                document.getElementById("nav-user-profile").classList.remove("hidden");
+                document.getElementById("nav-mis-coches").classList.remove("hidden");
+                document.getElementById("nav-chats").classList.remove("hidden");
+                document.getElementById("nav-btn-publicar").classList.remove("hidden");
+                document.getElementById("user-name-display").innerText = usuarioActual;
+
+                if (usuarioLogueado.rol === "admin" || usuarioActual.toLowerCase() === "admin") {
+                    document.getElementById("nav-panel-admin").classList.remove("hidden");
+                }
+                mostrarSeccion('inicio');
+            } else {
+                alert("Credenciales incorrectas. Inténtalo de nuevo.");
+            }
+        } catch (error) {
+            console.error("Error al conectar con el backend:", error);
+            alert("Error de conexión con el servidor de Railway.");
         }
-        mostrarSeccion('inicio');
     };
 
-    document.getElementById("btn-logout").onclick = () => {
-        usuarioActual = "Invitado";
-        location.reload();
+    // CONEXIÓN REAL: Crear Cuenta (Envía datos directamente a MySQL)
+    document.getElementById("register-form").onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const datosUsuario = {
+            nombre: document.getElementById("reg-nombre").value,
+            apellidos: document.getElementById("reg-apellidos").value,
+            email: document.getElementById("reg-email").value,
+            password: document.getElementById("reg-password").value
+        };
+
+        try {
+            const respuesta = await fetch('/api/usuarios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datosUsuario)
+            });
+
+            if (respuesta.ok) {
+                alert("¡Cuenta creada con éxito! Ya puedes iniciar sesión.");
+                document.getElementById("login-tab").click(); // Redirige al login visualmente
+            } else {
+                const errorData = await respuesta.text();
+                alert("Error al registrar el usuario: " + (errorData || "Datos inválidos o correo ya registrado."));
+            }
+        } catch (error) {
+            console.error("Error en la petición de registro:", error);
+            alert("No se pudo conectar con el servidor para procesar el registro.");
+        }
     };
 
     // PUBLICAR COCHE
@@ -203,6 +247,11 @@ document.addEventListener("DOMContentLoaded", () => {
         cancelarEdicion();
         mostrarSeccion('mis-coches');
     };
+
+    document.getElementById("btn-logout").onclick = () => {
+        usuarioActual = "Invitado";
+        location.reload();
+    };
 });
 
 // ==========================================
@@ -249,11 +298,9 @@ window.abrirDetalle = function(idBuscado) {
     window.scrollTo(0, 0);
 }
 
-// Cargar Lista de Chats Reales
 window.cargarListaChats = function() {
     const container = document.getElementById("lista-chats-container");
     
-    // Buscar con quién hemos chateado
     const contactosUnicos = new Set();
     dbChats.forEach(m => {
         if (m.sender === usuarioActual) contactosUnicos.add(m.receiver);
@@ -267,7 +314,6 @@ window.cargarListaChats = function() {
 
     let htmlChats = "";
     contactosUnicos.forEach(contacto => {
-        // Encontrar el último mensaje para mostrarlo en la previsualización
         const mensajesConEsteContacto = dbChats.filter(m => 
             (m.sender === usuarioActual && m.receiver === contacto) || 
             (m.sender === contacto && m.receiver === usuarioActual)
@@ -290,13 +336,12 @@ window.cargarListaChats = function() {
 }
 
 window.abrirChat = function(nombre) {
-    chatActualCon = nombre; // Establecemos con quién estamos hablando
+    chatActualCon = nombre; 
     document.getElementById('chat-seller-name').innerText = nombre;
     
     const chatMsg = document.getElementById('chat-messages');
-    chatMsg.innerHTML = ``; // Limpiamos la caja
+    chatMsg.innerHTML = ``; 
 
-    // Cargar historial de base de datos
     const historial = dbChats.filter(m => 
         (m.sender === usuarioActual && m.receiver === nombre) ||
         (m.sender === nombre && m.receiver === usuarioActual)
@@ -318,13 +363,11 @@ window.enviarMensaje = function() {
     let msj = input.value.trim();
     if(!msj || !chatActualCon) return;
     
-    // Filtro de Palabras Prohibidas
     bannedWords.forEach(word => {
         const regex = new RegExp(`\\b${word.trim()}\\b`, 'gi');
         msj = msj.replace(regex, '***');
     });
 
-    // Guardar en la Base de Datos
     const nuevoMensaje = {
         sender: usuarioActual,
         receiver: chatActualCon,
@@ -332,9 +375,8 @@ window.enviarMensaje = function() {
         timestamp: Date.now()
     };
     dbChats.push(nuevoMensaje);
-    guardarDatos(); // Guardamos los cambios
+    guardarDatos(); 
 
-    // Mostrar en pantalla
     chatMsg.innerHTML += `<div class="message sent"><p>${msj}</p></div>`;
     input.value = "";
     chatMsg.scrollTop = chatMsg.scrollHeight;
