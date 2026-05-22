@@ -1,4 +1,4 @@
-//==========================================
+// ==========================================
 // 1. BASE DE DATOS Y PERSISTENCIA
 // ==========================================
 const cochesPorDefecto = [
@@ -181,7 +181,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // NUEVO: Formulario de Registro Conectado a Base de Datos con Login Automático
     document.getElementById("register-form").onsubmit = async (e) => {
         e.preventDefault();
-        const userVal = document.getElementById("register-user").value;
+        const usernameVal = document.getElementById("register-username").value;
+        const nombreVal = document.getElementById("register-nombre").value;
+        const apellidosVal = document.getElementById("register-apellidos").value;
         const emailVal = document.getElementById("register-email") ? document.getElementById("register-email").value : "";
         const passVal = document.getElementById("register-pass") ? document.getElementById("register-pass").value : "";
 
@@ -190,14 +192,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch("/api/registrar-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
-                body: JSON.stringify({ username: userVal, email: emailVal, password: passVal })
+                body: JSON.stringify({ 
+                    username: usernameVal, 
+                    nombre: nombreVal,
+                    apellidos: apellidosVal,
+                    email: emailVal, 
+                    password: passVal 
+                })
             });
 
             const data = await response.json();
 
             if (response.ok && data.ok) {
                 alert(data.mensaje); // "¡Cuenta creada y sesión iniciada!"
-                loguearUsuarioEnCliente(userVal, data.rol || "USER");
+                loguearUsuarioEnCliente(usernameVal, data.user || "USER");
             } else {
                 alert(data.mensaje || "El usuario ya existe.");
             }
@@ -205,11 +213,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error en registro:", err);
             alert("No se pudo conectar con el servidor de base de datos.");
         }
-    };
-
-    document.getElementById("btn-logout").onclick = () => {
-        usuarioActual = "Invitado";
-        location.reload();
     };
 
     // PUBLICAR COCHE
