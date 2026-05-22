@@ -25,6 +25,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setHeader("Access-Control-Allow-Origin", "*"); // Permite pruebas desde local
         request.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType("application/json;charset=UTF-8");
         Map<String, Object> respuestaJson = new HashMap<>();
@@ -50,12 +51,14 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            String username = datos.get("username");
+            // CAMBIO: Ahora leemos los campos que corresponden a tu nueva tabla SQL
+            String nombre = datos.get("username"); // Usamos lo que viene de tu input "register-user" como nombre
+            String apellidos = datos.get("apellidos") != null ? datos.get("apellidos") : "No especificado"; // Evita que falle si no lo mandas aún
             String email = datos.get("email");
             String password = datos.get("password");
-
+            
             // Validación estricta de campos vacíos
-            if (username == null || username.trim().isEmpty() || 
+            if (nombre == null || nombre.trim().isEmpty() || 
                 email == null || email.trim().isEmpty() || 
                 password == null || password.trim().isEmpty()) {
                 
@@ -66,8 +69,8 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            // Llamar al DAO para registrar y procesar al usuario
-            Usuario nuevoUsuario = usuarioDAO.registrarUsuarioYObtener(username.trim(), email.trim(), password);
+            // CAMBIO AQUÍ (Línea corregida): Pasamos los 4 parámetros que tu nuevo UsuarioDAO espera
+            Usuario nuevoUsuario = usuarioDAO.registrarUsuarioYObtener(nombre.trim(), apellidos.trim(), email.trim(), password);
 
             if (nuevoUsuario != null) {
                 // Crear o recuperar la sesión en el servidor Jakarta EE
@@ -92,7 +95,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
             respuestaJson.put("mensaje", "Error crítico en el servidor: " + e.getMessage());
         }
 
-        // Enviar la respuesta JSON estructurada al cliente
+        // Enviar la respuesta JSON TRUCTURADA al cliente
         response.getWriter().write(gson.toJson(respuestaJson));
     }
 }
