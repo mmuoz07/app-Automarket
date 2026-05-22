@@ -13,20 +13,26 @@ public class UsuarioDAO {
     private static final String PASSWORD;
 
     static {
-        // Si Railway nos da las variables de entorno detalladas, construimos la URL JDBC perfecta
-        if (System.getenv("MYSQLHOST") != null) {
-            String host = System.getenv("MYSQLHOST");
-            String port = System.getenv("MYSQLPORT") != null ? System.getenv("MYSQLPORT") : "3306";
-            String database = System.getenv("MYSQLDATABASE") != null ? System.getenv("MYSQLDATABASE") : "railway";
+        // Miramos si existe la variable MYSQL_URL de tu captura
+        String railwayUrl = System.getenv("MYSQL_URL");
+        
+        if (railwayUrl != null) {
+            // Railway te da: mysql://usuario:contraseña@host:puerto/base_datos
+            // Java necesita: jdbc:mysql://usuario:contraseña@host:puerto/base_datos
+            // Le metemos el prefijo "jdbc:" obligatoriamente para que el Driver funcione
+            URL = "jdbc:" + railwayUrl;
             
-            URL = "jdbc:mysql://" + host + ":" + port + "/" + database;
-            USER = System.getenv("MYSQLUSER");
-            PASSWORD = System.getenv("MYSQLPASSWORD");
+            // Cuando usas la URL completa con usuario y contraseña incrustados,
+            // DriverManager no necesita que le pases el USER y el PASSWORD por separado.
+            USER = null;
+            PASSWORD = null;
+            System.out.println("🚀 Conectando a Railway con URL parseada correctamente.");
         } else {
-            // Fallback impecable para tu entorno de Docker local
+            // Tu entorno local de Docker de toda la vida
             URL = "jdbc:mysql://mysql:3306/automarket_db";
             USER = "root";
             PASSWORD = "root";
+            System.out.println("💻 Conectando a Localhost (Docker).");
         }
     }
 
@@ -46,6 +52,7 @@ public class UsuarioDAO {
         String sqlInsertar = "INSERT INTO usuarios (nombre, apellidos, email, password, username) VALUES (?, ?, ?, ?, ?)";
         String sqlObtener = "SELECT id FROM usuarios WHERE email = ?";
 
+        // Pasamos URL, USER y PASSWORD (si son null, el driver saca las credenciales directamente del string de la URL)
         try (Connection conexion = DriverManager.getConnection(URL, USER, PASSWORD)) {
             
             // 1. Validar Email
@@ -70,7 +77,7 @@ public class UsuarioDAO {
                 }
             }
 
-            // 3. Insertar datos (5 campos estrictos)
+            // 3. Insertar datos
             try (PreparedStatement insert = conexion.prepareStatement(sqlInsertar)) {
                 insert.setString(1, nombre.trim());
                 insert.setString(2, apellidos.trim());
