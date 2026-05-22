@@ -8,17 +8,27 @@ import java.sql.SQLException;
 
 public class UsuarioDAO {
     
-    private static final String URL = System.getenv("MYSQL_URL") != null 
-            ? System.getenv("MYSQL_URL") 
-            : "jdbc:mysql://mysql:3306/automarket_db";
+    private static final String URL;
+    private static final String USER;
+    private static final String PASSWORD;
+
+    static {
+        // Si Railway nos da las variables de entorno detalladas, construimos la URL JDBC perfecta
+        if (System.getenv("MYSQLHOST") != null) {
+            String host = System.getenv("MYSQLHOST");
+            String port = System.getenv("MYSQLPORT") != null ? System.getenv("MYSQLPORT") : "3306";
+            String database = System.getenv("MYSQLDATABASE") != null ? System.getenv("MYSQLDATABASE") : "railway";
             
-    private static final String USER = System.getenv("MYSQLUSER") != null 
-            ? System.getenv("MYSQLUSER") 
-            : "root";
-            
-    private static final String PASSWORD = System.getenv("MYSQLPASSWORD") != null 
-            ? System.getenv("MYSQLPASSWORD") 
-            : "root";
+            URL = "jdbc:mysql://" + host + ":" + port + "/" + database;
+            USER = System.getenv("MYSQLUSER");
+            PASSWORD = System.getenv("MYSQLPASSWORD");
+        } else {
+            // Fallback impecable para tu entorno de Docker local
+            URL = "jdbc:mysql://mysql:3306/automarket_db";
+            USER = "root";
+            PASSWORD = "root";
+        }
+    }
 
     public UsuarioDAO() {
         try { 
@@ -31,19 +41,14 @@ public class UsuarioDAO {
     public Usuario registrarUsuarioYObtener(String username, String nombre, String apellidos, String email, String password) {
         System.out.println("DEBUG REGISTRO -> Username: [" + username + "], Email: [" + email + "]");
         
-        // Consultas atómicas aisladas para evitar colisiones lógicas
         String sqlBuscarEmail = "SELECT COUNT(*) FROM usuarios WHERE email = ?";
         String sqlBuscarUser = "SELECT COUNT(*) FROM usuarios WHERE username = ?";
-        
-        // CAMBIO: Se elimina 'user' y el sexto '?' de la inserción. Ahora son 5 campos.
         String sqlInsertar = "INSERT INTO usuarios (nombre, apellidos, email, password, username) VALUES (?, ?, ?, ?, ?)";
-        
-        // CAMBIO: Se elimina ', user' de la selección.
         String sqlObtener = "SELECT id FROM usuarios WHERE email = ?";
 
         try (Connection conexion = DriverManager.getConnection(URL, USER, PASSWORD)) {
             
-            // Validación aislada A: Email
+            // 1. Validar Email
             try (PreparedStatement checkEmail = conexion.prepareStatement(sqlBuscarEmail)) {
                 checkEmail.setString(1, email.trim());
                 try (ResultSet rs = checkEmail.executeQuery()) {
@@ -54,7 +59,7 @@ public class UsuarioDAO {
                 }
             }
 
-            // Validación aislada B: Username
+            // 2. Validar Username
             try (PreparedStatement checkUser = conexion.prepareStatement(sqlBuscarUser)) {
                 checkUser.setString(1, username.trim());
                 try (ResultSet rs = checkUser.executeQuery()) {
@@ -65,7 +70,7 @@ public class UsuarioDAO {
                 }
             }
 
-            // Inserción parametrizada rigurosa (5 parámetros correspondientes a tus 5 '?')
+            // 3. Insertar datos (5 campos estrictos)
             try (PreparedStatement insert = conexion.prepareStatement(sqlInsertar)) {
                 insert.setString(1, nombre.trim());
                 insert.setString(2, apellidos.trim());
@@ -76,7 +81,7 @@ public class UsuarioDAO {
                 System.out.println("✅ Usuario insertado con éxito en la base de datos.");
             }
 
-            // Mapeo seguro sobre las propiedades estándar de la clase modelo Usuario
+            // 4. Mapear objeto de retorno
             try (PreparedStatement select = conexion.prepareStatement(sqlObtener)) {
                 select.setString(1, email.trim());
                 try (ResultSet rs = select.executeQuery()) {
@@ -86,7 +91,6 @@ public class UsuarioDAO {
                         u.setNombre(nombre); 
                         u.setApellidos(apellidos);
                         u.setEmail(email);
-                        // CAMBIO: Eliminada la línea u.setUser(...) que provocaba el fallo de columna desconocida
                         return u; 
                     }
                 }
