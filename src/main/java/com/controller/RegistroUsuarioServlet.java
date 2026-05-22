@@ -48,14 +48,12 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            // CORRECCIÓN: Capturamos correctamente el 'username' Y el 'nombre' por separado del JSON
             String username = datos.get("username"); 
-            String nombre = datos.get("nombre") != null ? datos.get("nombre") : username; // Si no viene nombre, usamos el username
+            String nombre = datos.get("nombre") != null ? datos.get("nombre") : username; 
             String apellidos = datos.get("apellidos") != null ? datos.get("apellidos") : "No especificado";
             String email = datos.get("email");
             String password = datos.get("password");
             
-            // Validación estricta de campos obligatorios
             if (username == null || username.trim().isEmpty() || 
                 email == null || email.trim().isEmpty() || 
                 password == null || password.trim().isEmpty()) {
@@ -67,7 +65,6 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            // CORRECCIÓN LÍNEA 73: Ahora se pasan los 5 parámetros en el orden exacto que pide el DAO
             Usuario nuevoUsuario = usuarioDAO.registrarUsuarioYObtener(username.trim(), nombre.trim(), apellidos.trim(), email.trim(), password);
 
             if (nuevoUsuario != null) {
@@ -77,7 +74,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_CREATED); 
                 respuestaJson.put("ok", true);
                 respuestaJson.put("mensaje", "¡Cuenta creada y sesión iniciada!");
-                respuestaJson.put("user", nuevoUsuario.getUser()); 
+                // MODIFICADO: Eliminada la línea que llamaba a nuevoUsuario.getUser()
             } else {
                 response.setStatus(HttpServletResponse.SC_CONFLICT); 
                 respuestaJson.put("ok", false);

@@ -25,5 +25,5 @@ CREATE TABLE usuarios (
     apellidos VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-   username VARCHAR(30) NOT NULL,
+   username VARCHAR(30) NOT NULL
 );

@@ -24,16 +24,16 @@ const cochesPorDefecto = [
 
 let dbCoches = JSON.parse(localStorage.getItem('autoMarketDb')) || cochesPorDefecto;
 let bannedWords = JSON.parse(localStorage.getItem('bannedWordsDb')) || ["estafa", "tonto", "idiota"];
-let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; // NUEVA: Base de datos de chats
+let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; 
 
 let usuarioActual = "Invitado";
 let idCocheEditando = null;
-let chatActualCon = null; // Variable para saber con quién estamos chateando actualmente
+let chatActualCon = null; 
 
 function guardarDatos() {
     localStorage.setItem('autoMarketDb', JSON.stringify(dbCoches));
     localStorage.setItem('bannedWordsDb', JSON.stringify(bannedWords));
-    localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats)); // Guardar los chats
+    localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats)); 
 }
 
 // ==========================================
@@ -131,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("login-tab").classList.remove("active");
     };
 
-    // Función auxiliar para aplicar el inicio de sesión visualmente en la interfaz
     function loguearUsuarioEnCliente(username, rol) {
         usuarioActual = username;
         document.getElementById("auth-modal").classList.add("hidden");
@@ -143,21 +142,18 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("nav-btn-publicar").classList.remove("hidden");
         document.getElementById("user-name-display").innerText = usuarioActual;
 
-        // Mostrar Panel Admin a admin según el rol que devuelve la base de datos
         if (rol === "ADMIN" || username.toLowerCase() === "admin") {
             document.getElementById("nav-panel-admin").classList.remove("hidden");
         }
         mostrarSeccion('inicio');
     }
 
-    // Login conectado a Base de Datos
     document.getElementById("login-form").onsubmit = async (e) => {
         e.preventDefault();
         const userVal = document.getElementById("login-user").value;
         const passVal = document.getElementById("login-pass") ? document.getElementById("login-pass").value : "";
 
         try {
-            // Reemplaza con tu URL real de Railway si pruebas directamente en producción
             const response = await fetch("/api/login-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
@@ -173,12 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (err) {
             console.error("Error en login:", err);
-            // Fallback por si la API aún no está disponible en entorno local
             loguearUsuarioEnCliente(userVal, "USER");
         }
     };
 
-    // NUEVO: Formulario de Registro Conectado a Base de Datos con Login Automático
     document.getElementById("register-form").onsubmit = async (e) => {
         e.preventDefault();
         const usernameVal = document.getElementById("register-username").value;
@@ -188,7 +182,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const passVal = document.getElementById("register-pass") ? document.getElementById("register-pass").value : "";
 
         try {
-            // Endpoint de tu Servlet en Railway
             const response = await fetch("/api/registrar-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
@@ -204,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (response.ok && data.ok) {
-                alert(data.mensaje); // "¡Cuenta creada y sesión iniciada!"
+                alert(data.mensaje); 
                 loguearUsuarioEnCliente(usernameVal, data.user || "USER");
             } else {
                 alert(data.mensaje || "El usuario ya existe.");
@@ -215,7 +208,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // PUBLICAR COCHE
     document.getElementById("form-publicar").onsubmit = async function(e) {
         e.preventDefault();
         
@@ -308,11 +300,9 @@ window.abrirDetalle = function(idBuscado) {
     window.scrollTo(0, 0);
 }
 
-// Cargar Lista de Chats Reales
 window.cargarListaChats = function() {
     const container = document.getElementById("lista-chats-container");
     
-    // Buscar con quién hemos chateado
     const contactosUnicos = new Set();
     dbChats.forEach(m => {
         if (m.sender === usuarioActual) contactosUnicos.add(m.receiver);
@@ -326,7 +316,6 @@ window.cargarListaChats = function() {
 
     let htmlChats = "";
     contactosUnicos.forEach(contacto => {
-        // Encontrar el último mensaje para mostrarlo en la previsualización
         const mensajesConEsteContacto = dbChats.filter(m =>
             (m.sender === usuarioActual && m.receiver === contacto) ||
             (m.sender === contacto && m.receiver === usuarioActual)
@@ -349,13 +338,12 @@ window.cargarListaChats = function() {
 }
 
 window.abrirChat = function(nombre) {
-    chatActualCon = nombre; // Establecemos con quién estamos hablando
+    chatActualCon = nombre; 
     document.getElementById('chat-seller-name').innerText = nombre;
     
     const chatMsg = document.getElementById('chat-messages');
-    chatMsg.innerHTML = ``; // Limpiamos la caja
+    chatMsg.innerHTML = ``; 
 
-    // Cargar historial de base de datos
     const historial = dbChats.filter(m =>
         (m.sender === usuarioActual && m.receiver === nombre) ||
         (m.sender === nombre && m.receiver === usuarioActual)
@@ -377,13 +365,11 @@ window.enviarMensaje = function() {
     let msj = input.value.trim();
     if(!msj || !chatActualCon) return;
     
-    // Filtro de Palabras Prohibidas
     bannedWords.forEach(word => {
         const regex = new RegExp(`\\b${word.trim()}\\b`, 'gi');
         msj = msj.replace(regex, '***');
     });
 
-    // Guardar en la Base de Datos
     const nuevoMensaje = {
         sender: usuarioActual,
         receiver: chatActualCon,
@@ -391,10 +377,9 @@ window.enviarMensaje = function() {
         timestamp: Date.now()
     };
     dbChats.push(nuevoMensaje);
-    guardarDatos(); // Guardamos los cambios
+    guardarDatos(); 
 
-    // Mostrar en pantalla
-    chatMsg.innerHTML += `<div class="message sent"><p>${msj}</p></div>`;
+    chatMsg.innerHTML += `<div class="message sent"><div class="message-text">${msj}</div></div>`;
     input.value = "";
     chatMsg.scrollTop = chatMsg.scrollHeight;
 }
