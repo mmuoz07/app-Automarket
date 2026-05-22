@@ -20,10 +20,9 @@ public class UsuarioDAO {
     }
 
     /**
-     * Registra un usuario con la nueva estructura de la base de datos.
+     * Registra un usuario con la estructura sincronizada de la base de datos.
      */
     public Usuario registrarUsuarioYObtener(String nombre, String apellidos, String email, String password) {
-        // Usamos el email como identificador único de búsqueda en el PASO 1 y PASO 3
         System.out.println("DEBUG REGISTRO -> Nombre: [" + nombre + "], Apellidos: [" + apellidos + "], Email: [" + email + "]");
         
         String sqlBuscar = "SELECT COUNT(*) FROM usuarios WHERE email = ?";
@@ -38,7 +37,7 @@ public class UsuarioDAO {
                 try (ResultSet rs = check.executeQuery()) {
                     if (rs.next() && rs.getInt(1) > 0) {
                         System.out.println("❌ El correo '" + email + "' ya está registrado.");
-                        return null; // Retorna null si ya está duplicado
+                        return null; 
                     }
                 }
             }
@@ -52,17 +51,18 @@ public class UsuarioDAO {
                 insert.executeUpdate();
             }
 
-            // PASO 3: Obtener el ID generado y el tipo de usuario ('user' o 'admin')
+            // PASO 3: Obtener el ID generado y el tipo de cuenta ('user' o 'admin')
             try (PreparedStatement select = conexion.prepareStatement(sqlObtener)) {
                 select.setString(1, email);
                 try (ResultSet rs = select.executeQuery()) {
                     if (rs.next()) {
                         Usuario u = new Usuario();
                         u.setId(rs.getInt("id"));
-                        u.setUsername(nombre); // Puedes mapear el nombre aquí para la sesión visual
+                        u.setNombre(nombre); 
+                        u.setApellidos(apellidos);
                         u.setEmail(email);
-                        u.setRol(rs.getString("user")); // Extrae de la columna 'user' y lo guarda en tu objeto Java
-                        return u; // Devuelve el usuario listo
+                        u.setUser(rs.getString("user")); // Cambiado setRol por setUser
+                        return u; 
                     }
                 }
             }

@@ -51,9 +51,9 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            // CAMBIO: Ahora leemos los campos que corresponden a tu nueva tabla SQL
-            String nombre = datos.get("username"); // Usamos lo que viene de tu input "register-user" como nombre
-            String apellidos = datos.get("apellidos") != null ? datos.get("apellidos") : "No especificado"; // Evita que falle si no lo mandas aún
+            // Leemos los campos dinámicamente desde el JSON enviado por el frontend
+            String nombre = datos.get("username"); // Captura el valor que viene de tu input "register-user"
+            String apellidos = datos.get("apellidos") != null ? datos.get("apellidos") : "No especificado";
             String email = datos.get("email");
             String password = datos.get("password");
             
@@ -69,11 +69,11 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            // CAMBIO AQUÍ (Línea corregida): Pasamos los 4 parámetros que tu nuevo UsuarioDAO espera
+            // Pasamos los 4 parámetros esperados al DAO
             Usuario nuevoUsuario = usuarioDAO.registrarUsuarioYObtener(nombre.trim(), apellidos.trim(), email.trim(), password);
 
             if (nuevoUsuario != null) {
-                // Crear o recuperar la sesión en el servidor Jakarta EE
+                // Crear o recuperar la sesión en el servidor
                 HttpSession session = request.getSession(true); 
                 
                 // Guardamos el objeto usuario completo en la sesión
@@ -82,7 +82,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_CREATED); // 201 Created
                 respuestaJson.put("ok", true);
                 respuestaJson.put("mensaje", "¡Cuenta creada y sesión iniciada!");
-                respuestaJson.put("rol", nuevoUsuario.getRol());
+                respuestaJson.put("user", nuevoUsuario.getUser()); // Cambiado "rol" por "user"
             } else {
                 response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
                 respuestaJson.put("ok", false);
@@ -95,7 +95,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
             respuestaJson.put("mensaje", "Error crítico en el servidor: " + e.getMessage());
         }
 
-        // Enviar la respuesta JSON TRUCTURADA al cliente
+        // Enviar la respuesta JSON estructurada al cliente
         response.getWriter().write(gson.toJson(respuestaJson));
     }
 }
