@@ -1,28 +1,7 @@
 // ==========================================
 // 1. BASE DE DATOS Y PERSISTENCIA
 // ==========================================
-const cochesPorDefecto = [
-    {
-        id: 0, estado: "aprobado", marca: "BMW", modelo: "Serie 3", precio: "28500", km: "45000", ano: 2020,
-        motor: "Diésel", transmision: "Automática", ciudad: "Madrid",
-        imgs: ["https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80"],
-        desc: "BMW Serie 3 en excelente estado.", vendedor: "Usuario Demo"
-    },
-    {
-        id: 1, estado: "aprobado", marca: "Mercedes", modelo: "Clase A", precio: "32000", km: "28000", ano: 2021,
-        motor: "Gasolina", transmision: "Automática", ciudad: "Barcelona",
-        imgs: ["https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=800&q=80"],
-        desc: "Vehículo impecable.", vendedor: "Carlos Ruiz"
-    },
-    {
-        id: 2, estado: "pendiente", marca: "Audi", modelo: "A4", precio: "26000", km: "62000", ano: 2019,
-        motor: "Diésel", transmision: "Manual", ciudad: "Valencia",
-        imgs: ["https://images.unsplash.com/photo-1606152421802-db97b9c7a11b?auto=format&fit=crop&w=800&q=80"],
-        desc: "Mantenimiento al día.", vendedor: "Ana Martínez"
-    }
-];
-
-let dbCoches = JSON.parse(localStorage.getItem('autoMarketDb')) || cochesPorDefecto;
+let dbCoches = [];
 let bannedWords = JSON.parse(localStorage.getItem('bannedWordsDb')) || ["estafa", "tonto", "idiota"];
 let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; 
 
@@ -31,7 +10,6 @@ let idCocheEditando = null;
 let chatActualCon = null; 
 
 function guardarDatos() {
-    localStorage.setItem('autoMarketDb', JSON.stringify(dbCoches));
     localStorage.setItem('bannedWordsDb', JSON.stringify(bannedWords));
     localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats)); 
 }
@@ -55,26 +33,37 @@ function mostrarSeccion(target) {
     if (target === 'lista-chats') cargarListaChats();
 }
 
-function cargarCochesInicio() {
+async function cargarCochesInicio() {
     const grid = document.getElementById("grid-cars");
     const countText = document.getElementById("inicio-resultados-count");
     if (!grid) return;
 
     const mainSearch = document.getElementById("main-search");
+    const query = mainSearch ? mainSearch.value.trim() : "";
+
+    try {
+        const response = await fetch("/api/buscar-coches", {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=UTF-8" },
+            body: JSON.stringify({ texto: query })
+        });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+            dbCoches = data.resultados;
+        }
+    } catch (err) {
+        console.error("Error al traer coches del servidor:", err);
+    }
+
     const filterFuel = document.getElementById("filter-fuel");
     const filterYear = document.getElementById("filter-year");
-
-    const query = mainSearch ? mainSearch.value.toLowerCase() : "";
     const fuel = filterFuel ? filterFuel.value : "all";
     const yearMin = filterYear ? parseInt(filterYear.value) : 0;
 
     const filtrados = dbCoches.filter(c => {
-        const matchEstado = c.estado === "aprobado";
-        const busquedaTexto = (c.marca + " " + c.modelo + " " + c.ciudad).toLowerCase();
-        const matchQuery = busquedaTexto.includes(query);
         const matchFuel = fuel === "all" || c.motor === fuel;
         const matchYear = c.ano >= yearMin;
-        return matchEstado && matchQuery && matchFuel && matchYear;
+        return matchFuel && matchYear;
     });
 
     if (countText) countText.innerText = `${filtrados.length} coches encontrados`;
@@ -84,10 +73,12 @@ function cargarCochesInicio() {
         return;
     }
 
-    grid.innerHTML = filtrados.map(c => `
+    grid.innerHTML = filtrados.map(c => {
+        const imagenCoche = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+        return `
         <div class="car-card car-card-clickable" onclick="abrirDetalle(${c.id})">
             <div class="car-image-container">
-                <img src="${c.imgs[0]}" alt="${c.marca} ${c.modelo}">
+                <img src="${imagenCoche}" alt="${c.marca} ${c.modelo}">
                 <span class="price-tag">€${c.precio}</span>
             </div>
             <div class="car-info">
@@ -101,11 +92,11 @@ function cargarCochesInicio() {
                 <div class="car-footer">Vendedor: ${c.vendedor}</div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 // ==========================================
-// 3. INICIALIZACIÓN Y AUTH (CONECTADO A BASE DE DATOS Y AUTOMÁTICO)
+// 3. INICIALIZACIÓN Y AUTH (LOGOUT Y PUBLICAR CENTRALIZADO)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
     cargarCochesInicio();
@@ -148,6 +139,31 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarSeccion('inicio');
     }
 
+    // MODIFICADO: Logout enviado como acción al servlet unificado de coches
+    document.getElementById("btn-logout").onclick = async () => {
+        try {
+            const response = await fetch("/api/buscar-coches", { 
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8" },
+                body: JSON.stringify({ accion: "logout" })
+            });
+            const data = await response.json();
+            if (response.ok && data.ok) {
+                usuarioActual = "Invitado";
+                document.getElementById("nav-btn-login").classList.remove("hidden");
+                document.getElementById("nav-user-profile").classList.add("hidden");
+                document.getElementById("nav-mis-coches").classList.add("hidden");
+                document.getElementById("nav-chats").classList.add("hidden");
+                document.getElementById("nav-btn-publicar").classList.add("hidden");
+                document.getElementById("nav-panel-admin").classList.add("hidden");
+                mostrarSeccion('inicio');
+                alert("Sesión cerrada correctamente.");
+            }
+        } catch (err) {
+            console.error("Error al cerrar sesión:", err);
+        }
+    };
+
     document.getElementById("login-form").onsubmit = async (e) => {
         e.preventDefault();
         const userVal = document.getElementById("login-user").value;
@@ -159,9 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
                 body: JSON.stringify({ username: userVal, password: passVal })
             });
-
             const data = await response.json();
-
             if (response.ok && data.ok) {
                 loguearUsuarioEnCliente(userVal, data.rol);
             } else {
@@ -169,7 +183,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (err) {
             console.error("Error en login:", err);
-            loguearUsuarioEnCliente(userVal, "USER");
         }
     };
 
@@ -193,21 +206,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     password: passVal 
                 })
             });
-
             const data = await response.json();
-
             if (response.ok && data.ok) {
                 alert(data.mensaje); 
-                loguearUsuarioEnCliente(usernameVal, data.user || "USER");
+                loguearUsuarioEnCliente(usernameVal, "USER");
             } else {
                 alert(data.mensaje || "El usuario ya existe.");
             }
         } catch (err) {
             console.error("Error en registro:", err);
-            alert("No se pudo conectar con el servidor de base de datos.");
         }
     };
 
+    // MODIFICADO: Envía los datos del nuevo coche al endpoint unificado
     document.getElementById("form-publicar").onsubmit = async function(e) {
         e.preventDefault();
         
@@ -227,9 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const imagenesCargadas = await Promise.all(promesasImagenes);
 
-        const nuevoCoche = {
-            id: idCocheEditando || Date.now(),
-            estado: "pendiente",
+        const cocheJSON = {
             marca: document.getElementById("pub-marca").value,
             modelo: document.getElementById("pub-modelo").value,
             ciudad: document.getElementById("pub-ciudad").value,
@@ -239,20 +248,27 @@ document.addEventListener("DOMContentLoaded", () => {
             motor: document.getElementById("pub-motor").value,
             transmision: document.getElementById("pub-transmision").value,
             imgs: imagenesCargadas,
-            desc: document.getElementById("pub-desc").value,
-            vendedor: usuarioActual
+            desc: document.getElementById("pub-desc").value
         };
 
-        if (idCocheEditando !== null) {
-            const index = dbCoches.findIndex(c => c.id === idCocheEditando);
-            if (index !== -1) dbCoches[index] = nuevoCoche;
-        } else {
-            dbCoches.push(nuevoCoche);
+        try {
+            const response = await fetch("/api/buscar-coches", {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8" },
+                body: JSON.stringify(cocheJSON)
+            });
+            const data = await response.json();
+            if (response.ok && data.ok) {
+                alert(data.mensaje);
+                document.getElementById("form-publicar").reset();
+                mostrarSeccion('inicio');
+            } else {
+                alert(data.mensaje || "Error al subir el coche.");
+            }
+        } catch (err) {
+            console.error("Error al conectar con el servidor:", err);
+            alert("Fallo de comunicación con la base de datos.");
         }
-        
-        guardarDatos();
-        cancelarEdicion();
-        mostrarSeccion('mis-coches');
     };
 });
 
@@ -269,8 +285,9 @@ window.abrirDetalle = function(idBuscado) {
     const c = dbCoches.find(item => item.id === idBuscado);
     if (!c) return;
     
-    let mainImg = `<img src="${c.imgs[0]}" style="width:100%; border-radius:1rem;">`;
-    let restImgs = c.imgs.length > 1 ? `<div class="multi-img-grid">` + c.imgs.slice(1).map(i => `<img src="${i}">`).join('') + `</div>` : '';
+    const fotoPrincipal = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+    let mainImg = `<img src="${fotoPrincipal}" style="width:100%; border-radius:1rem;">`;
+    let restImgs = (c.imgs && c.imgs.length > 1) ? `<div class="multi-img-grid">` + c.imgs.slice(1).map(i => `<img src="${i}">`).join('') + `</div>` : '';
 
     document.getElementById("detalle-coche-content").innerHTML = `
         <div class="detalle-grid">
@@ -288,7 +305,7 @@ window.abrirDetalle = function(idBuscado) {
                     <div class="spec-box"><span>Motor</span><strong>${c.motor}</strong></div>
                     <div class="spec-box"><span>Cambio</span><strong>${c.transmision}</strong></div>
                 </div>
-                <div class="desc-box"><h3>Descripción</h3><p>${c.desc}</p></div>
+                <div class="desc-box"><h3>Descripción</h3><p>${c.desc || 'Sin descripción'}</p></div>
                 <div class="vendedor-box">
                     <div class="vendedor-nombre">${c.vendedor}</div>
                     <button class="btn-dark-full" onclick="abrirChat('${c.vendedor}')">Enviar Mensaje</button>
@@ -302,7 +319,6 @@ window.abrirDetalle = function(idBuscado) {
 
 window.cargarListaChats = function() {
     const container = document.getElementById("lista-chats-container");
-    
     const contactosUnicos = new Set();
     dbChats.forEach(m => {
         if (m.sender === usuarioActual) contactosUnicos.add(m.receiver);
@@ -333,14 +349,12 @@ window.cargarListaChats = function() {
             </div>
         `;
     });
-    
     container.innerHTML = htmlChats;
 }
 
 window.abrirChat = function(nombre) {
     chatActualCon = nombre; 
     document.getElementById('chat-seller-name').innerText = nombre;
-    
     const chatMsg = document.getElementById('chat-messages');
     chatMsg.innerHTML = ``; 
 
@@ -401,14 +415,12 @@ window.cargarMisCoches = function() {
 window.eliminarCoche = function(id) {
     if(confirm("¿Seguro que quieres eliminar esta publicación?")) {
         dbCoches = dbCoches.filter(c => c.id !== id);
-        guardarDatos();
         cargarMisCoches();
     }
 }
 
 window.cargarPanelAdmin = function() {
     document.getElementById("admin-banned-words").value = bannedWords.join(", ");
-    
     const pendientes = dbCoches.filter(c => c.estado === "pendiente");
     const aprobados = dbCoches.filter(c => c.estado === "aprobado");
     const rechazados = dbCoches.filter(c => c.estado === "rechazado");
@@ -425,19 +437,19 @@ window.cargarPanelAdmin = function() {
 
 function renderCarHorizontal(c, isPropietario = false, isAdmin = false) {
     let actions = "";
-    
     if(isPropietario) {
         actions = `<button class="btn-action btn-reject" onclick="eliminarCoche(${c.id})">Eliminar</button>`;
     }
-    
     if(isAdmin) {
         if(c.estado !== 'aprobado') actions += `<button class="btn-action btn-approve" onclick="cambiarEstado(${c.id}, 'aprobado')">Aprobar</button>`;
         if(c.estado !== 'rechazado') actions += `<button class="btn-action btn-reject" onclick="cambiarEstado(${c.id}, 'rechazado')">Rechazar (Imágenes/Datos)</button>`;
     }
 
+    const primeraImg = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+
     return `
         <div class="car-card-horizontal">
-            <img src="${c.imgs[0]}">
+            <img src="${primeraImg}">
             <div class="car-card-content">
                 <div class="car-header-flex">
                     <h3>${c.marca} ${c.modelo}</h3>
@@ -455,7 +467,6 @@ window.cambiarEstado = (id, nuevoEstado) => {
     const coche = dbCoches.find(c => c.id === id);
     if(coche) {
         coche.estado = nuevoEstado;
-        guardarDatos();
         cargarPanelAdmin();
     }
 };
