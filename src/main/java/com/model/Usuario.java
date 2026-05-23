@@ -6,18 +6,20 @@ public class Usuario {
     private String apellidos;
     private String email;
     private String password;
-    private String user; // Guarda el tipo de cuenta: 'user' o 'admin'
+    private String username; // Añadido para gestionar el nombre de usuario
+    private String user;     // Guarda el tipo de cuenta: 'user' o 'admin'
 
     // Constructor vacío obligatorio
     public Usuario() {}
 
     // Constructor completo actualizado
-    public Usuario(int id, String nombre, String apellidos, String email, String password, String user) {
+    public Usuario(int id, String nombre, String apellidos, String email, String password, String username, String user) {
         this.id = id;
         this.nombre = nombre;
         this.apellidos = apellidos;
         this.email = email;
         this.password = password;
+        this.username = username;
         this.user = user;
     }
 
@@ -36,6 +38,9 @@ public class Usuario {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
     public String getUser() { return user; }
     public void setUser(String user) { this.user = user; }
