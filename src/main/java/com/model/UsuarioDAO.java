@@ -17,11 +17,18 @@ public class UsuarioDAO {
         String railwayUrl = System.getenv("MYSQL_URL");
         
         if (railwayUrl != null) {
+            // Railway te da: mysql://usuario:contraseña@host:puerto/base_datos
+            // Java necesita: jdbc:mysql://usuario:contraseña@host:puerto/base_datos
+            // Le metemos el prefijo "jdbc:" obligatoriamente para que el Driver funcione
             URL = "jdbc:" + railwayUrl;
+            
+            // Cuando usas la URL completa con usuario y contraseña incrustados,
+            // DriverManager no necesita que le pases el USER y el PASSWORD por separado.
             USER = null;
             PASSWORD = null;
             System.out.println("🚀 Conectando a Railway con URL parseada correctamente.");
         } else {
+            // Tu entorno local de Docker de toda la vida
             URL = "jdbc:mysql://mysql:3306/automarket_db";
             USER = "root";
             PASSWORD = "root";
@@ -37,43 +44,15 @@ public class UsuarioDAO {
         }
     }
 
-    // NUEVO MÉTODO: Añadido para procesar el inicio de sesión contra tu DB
-    public Usuario loginUsuario(String username, String password) {
-        String sql = "SELECT * FROM usuarios WHERE username = ? AND password = ?";
-        
-        try (Connection conexion = DriverManager.getConnection(URL, USER, PASSWORD);
-             PreparedStatement ps = conexion.prepareStatement(sql)) {
-            
-            ps.setString(1, username);
-            ps.setString(2, password);
-            
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    Usuario u = new Usuario();
-                    u.setId(rs.getInt("id"));
-                    u.setNombre(rs.getString("nombre"));
-                    u.setApellidos(rs.getString("apellidos"));
-                    u.setEmail(rs.getString("email"));
-                    u.setPassword(rs.getString("password"));
-                    u.setUsername(rs.getString("username"));
-                    u.setUser(rs.getString("user")); // Recupera 'user' o 'admin' para el rol del front
-                    return u;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("⚠️ Error en loginUsuario DAO: " + e.getMessage());
-        }
-        return null;
-    }
-
     public Usuario registrarUsuarioYObtener(String username, String nombre, String apellidos, String email, String password) {
         System.out.println("DEBUG REGISTRO -> Username: [" + username + "], Email: [" + email + "]");
         
         String sqlBuscarEmail = "SELECT COUNT(*) FROM usuarios WHERE email = ?";
         String sqlBuscarUser = "SELECT COUNT(*) FROM usuarios WHERE username = ?";
-        String sqlInsertar = "INSERT INTO usuarios (nombre, apellidos, email, password, username, user) VALUES (?, ?, ?, ?, ?, 'user')";
-        String sqlObtener = "SELECT * FROM usuarios WHERE email = ?";
+        String sqlInsertar = "INSERT INTO usuarios (nombre, apellidos, email, password, username) VALUES (?, ?, ?, ?, ?)";
+        String sqlObtener = "SELECT id FROM usuarios WHERE email = ?";
 
+        // Pasamos URL, USER y PASSWORD (si son null, el driver saca las credenciales directamente del string de la URL)
         try (Connection conexion = DriverManager.getConnection(URL, USER, PASSWORD)) {
             
             // 1. Validar Email
@@ -98,7 +77,7 @@ public class UsuarioDAO {
                 }
             }
 
-            // 3. Insertar datos (con rol 'user' por defecto)
+            // 3. Insertar datos
             try (PreparedStatement insert = conexion.prepareStatement(sqlInsertar)) {
                 insert.setString(1, nombre.trim());
                 insert.setString(2, apellidos.trim());
@@ -109,18 +88,16 @@ public class UsuarioDAO {
                 System.out.println("✅ Usuario insertado con éxito en la base de datos.");
             }
 
-            // 4. Mapear objeto de retorno completo
+            // 4. Mapear objeto de retorno
             try (PreparedStatement select = conexion.prepareStatement(sqlObtener)) {
                 select.setString(1, email.trim());
                 try (ResultSet rs = select.executeQuery()) {
                     if (rs.next()) {
                         Usuario u = new Usuario();
                         u.setId(rs.getInt("id"));
-                        u.setNombre(rs.getString("nombre")); 
-                        u.setApellidos(rs.getString("apellidos"));
-                        u.setEmail(rs.getString("email"));
-                        u.setUsername(rs.getString("username"));
-                        u.setUser(rs.getString("user"));
+                        u.setNombre(nombre); 
+                        u.setApellidos(apellidos);
+                        u.setEmail(email);
                         return u; 
                     }
                 }
