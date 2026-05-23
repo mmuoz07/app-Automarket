@@ -5,7 +5,8 @@ let dbCoches = [];
 let bannedWords = JSON.parse(localStorage.getItem('bannedWordsDb')) || ["estafa", "tonto", "idiota"];
 let dbChats = JSON.parse(localStorage.getItem('autoMarketChatsDb')) || []; 
 
-let usuarioActual = "Invitado";
+let usuarioActual = localStorage.getItem('usuarioActual') || "Invitado";
+let rolActual = localStorage.getItem('rolActual') || "USER";
 let idCocheEditando = null;
 let chatActualCon = null; 
 
@@ -69,12 +70,12 @@ async function cargarCochesInicio() {
     if (countText) countText.innerText = `${filtrados.length} coches encontrados`;
 
     if (filtrados.length === 0) {
-        grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; padding:2rem; color: #666;'>No se han encontrado coches.</p>";
+        grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; padding:2rem; color: #666;'>No se han encontrado coches homologados o aprobados.</p>";
         return;
     }
 
     grid.innerHTML = filtrados.map(c => {
-        const imagenCoche = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+        const imagenCoche = (c.imgs && c.imgs.length > 0 && c.imgs[0] !== "") ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
         return `
         <div class="car-card car-card-clickable" onclick="abrirDetalle(${c.id})">
             <div class="car-image-container">
@@ -96,16 +97,21 @@ async function cargarCochesInicio() {
 }
 
 // ==========================================
-// 3. INICIALIZACIÓN Y AUTH (LOGOUT Y PUBLICAR CENTRALIZADO)
+// 3. INICIALIZACIÓN Y AUTH (CORREGIDO)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
+    // Verificar si ya había una sesión activa al recargar la página
+    if (usuarioActual !== "Invitado") {
+        aplicarInterfazLogueado(usuarioActual, rolActual);
+    }
+
     cargarCochesInicio();
 
     document.getElementById("main-search").addEventListener("input", cargarCochesInicio);
     document.getElementById("filter-fuel").addEventListener("change", cargarCochesInicio);
     document.getElementById("filter-year").addEventListener("change", cargarCochesInicio);
 
-    // Modal
+    // Modals de Auth
     document.getElementById("nav-btn-login").onclick = () => document.getElementById("auth-modal").classList.remove("hidden");
     document.getElementById("modal-close").onclick = () => document.getElementById("auth-modal").classList.add("hidden");
 
@@ -122,10 +128,13 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("login-tab").classList.remove("active");
     };
 
-    function loguearUsuarioEnCliente(username, rol) {
+    function aplicarInterfazLogueado(username, rol) {
         usuarioActual = username;
-        document.getElementById("auth-modal").classList.add("hidden");
+        rolActual = rol;
+        localStorage.setItem('usuarioActual', username);
+        localStorage.setItem('rolActual', rol);
 
+        document.getElementById("auth-modal").classList.add("hidden");
         document.getElementById("nav-btn-login").classList.add("hidden");
         document.getElementById("nav-user-profile").classList.remove("hidden");
         document.getElementById("nav-mis-coches").classList.remove("hidden");
@@ -136,10 +145,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (rol === "ADMIN" || username.toLowerCase() === "admin") {
             document.getElementById("nav-panel-admin").classList.remove("hidden");
         }
-        mostrarSeccion('inicio');
     }
 
-    // MODIFICADO: Logout enviado como acción al servlet unificado de coches
+    // Botón salir purga localStorage y sesión del Servidor
     document.getElementById("btn-logout").onclick = async () => {
         try {
             const response = await fetch("/api/buscar-coches", { 
@@ -150,6 +158,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             if (response.ok && data.ok) {
                 usuarioActual = "Invitado";
+                rolActual = "USER";
+                localStorage.removeItem('usuarioActual');
+                localStorage.removeItem('rolActual');
+
                 document.getElementById("nav-btn-login").classList.remove("hidden");
                 document.getElementById("nav-user-profile").classList.add("hidden");
                 document.getElementById("nav-mis-coches").classList.add("hidden");
@@ -177,7 +189,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             if (response.ok && data.ok) {
-                loguearUsuarioEnCliente(userVal, data.rol);
+                aplicarInterfazLogueado(userVal, data.rol || "USER");
+                mostrarSeccion('inicio');
             } else {
                 alert(data.mensaje || "Error al iniciar sesión.");
             }
@@ -209,7 +222,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             if (response.ok && data.ok) {
                 alert(data.mensaje); 
-                loguearUsuarioEnCliente(usernameVal, "USER");
+                aplicarInterfazLogueado(usernameVal, "USER");
+                mostrarSeccion('inicio');
             } else {
                 alert(data.mensaje || "El usuario ya existe.");
             }
@@ -218,10 +232,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // MODIFICADO: Envía los datos del nuevo coche al endpoint unificado
     document.getElementById("form-publicar").onsubmit = async function(e) {
         e.preventDefault();
-        
         const filesInput = document.getElementById("pub-img").files;
         if(filesInput.length < 1 || filesInput.length > 4) {
             alert("Debes seleccionar mínimo 1 y máximo 4 fotos.");
@@ -285,7 +297,7 @@ window.abrirDetalle = function(idBuscado) {
     const c = dbCoches.find(item => item.id === idBuscado);
     if (!c) return;
     
-    const fotoPrincipal = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+    const fotoPrincipal = (c.imgs && c.imgs.length > 0 && c.imgs[0] !== "") ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
     let mainImg = `<img src="${fotoPrincipal}" style="width:100%; border-radius:1rem;">`;
     let restImgs = (c.imgs && c.imgs.length > 1) ? `<div class="multi-img-grid">` + c.imgs.slice(1).map(i => `<img src="${i}">`).join('') + `</div>` : '';
 
@@ -445,7 +457,7 @@ function renderCarHorizontal(c, isPropietario = false, isAdmin = false) {
         if(c.estado !== 'rechazado') actions += `<button class="btn-action btn-reject" onclick="cambiarEstado(${c.id}, 'rechazado')">Rechazar (Imágenes/Datos)</button>`;
     }
 
-    const primeraImg = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
+    const primeraImg = (c.imgs && c.imgs.length > 0 && c.imgs[0] !== "") ? c.imgs[0] : "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80";
 
     return `
         <div class="car-card-horizontal">
