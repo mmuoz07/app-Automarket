@@ -6,17 +6,18 @@ public class Coche {
     private int id;
     private String marca;
     private String modelo;
-    private String precio; // Cambiado a String para coincidir con el DAO y Servlet
-    private String km;     // Cambiado a String para coincidir con el DAO y Servlet
+    private int precio; // Cambiado a String para coincidir con el DAO y Servlet
+    private int km;     // Cambiado a String para coincidir con el DAO y Servlet
     private int ano;       // Mantenido como int para el filtro de años
     private String motor;
     private String transmision;
     private String ciudad;
     private List<String> imgs; // Lista de Strings para las imágenes en Base64 o URLs
-    private String desc;       // Atributo "desc" mapeado a la descripción
+    private String descripcion;       // Atributo "desc" mapeado a la descripción
     private String vendedor;
     private String estado;
-
+    private String combustible;
+    private String ubicacion;
     // Constructor vacío por defecto (Obligatorio para Gson)
     public Coche() {
     }
@@ -46,19 +47,19 @@ public class Coche {
         this.modelo = modelo;
     }
 
-    public String getPrecio() {
+    public int getPrecio() {
         return precio;
     }
 
-    public void setPrecio(String precio) {
+    public void setPrecio(int precio) {
         this.precio = precio;
     }
 
-    public String getKm() {
+    public int getKm() {
         return km;
     }
 
-    public void setKm(String km) {
+    public void setKm(int km) {
         this.km = km;
     }
 
@@ -102,12 +103,12 @@ public class Coche {
         this.imgs = imgs;
     }
 
-    public String getDesc() {
-        return desc;
+    public String getDescripcion() {
+        return descripcion;
     }
 
-    public void setDesc(String desc) {
-        this.desc = desc;
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
 
     public String getVendedor() {
@@ -125,4 +126,21 @@ public class Coche {
     public void setEstado(String estado) {
         this.estado = estado;
     }
+
+    public String getCombustible(){
+        return combustible;
+    }
+
+    public void  setCombustible(String combustible){
+        this.combustible = combustible;
+    }
+
+    public String getUbicacion(){
+        return ubicacion;
+    }
+
+    public void  setUbicacion   (String ubicacion){
+        this.ubicacion = ubicacion;
+    }
+
 }
