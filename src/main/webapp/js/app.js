@@ -33,9 +33,6 @@ function guardarDatos() {
     localStorage.setItem('autoMarketChatsDb', JSON.stringify(dbChats));
 }
 
-// ==========================================
-// 2. NAVEGACIÓN Y RENDERIZADO BÁSICO
-// ==========================================
 function mostrarSeccion(target) {
     const sections = ['sec-inicio', 'sec-publicar', 'sec-mis-coches', 'sec-admin', 'sec-detalle', 'sec-chat', 'sec-lista-chats'];
     sections.forEach(id => {
@@ -100,17 +97,12 @@ function cargarCochesInicio() {
     `).join('');
 }
 
-// ==========================================
-// 3. INICIALIZACIÓN Y AUTH (CONECTADO A BASE DE DATOS Y AUTOMÁTICO)
-// ==========================================
 document.addEventListener("DOMContentLoaded", () => {
     cargarCochesInicio();
-
     document.getElementById("main-search").addEventListener("input", cargarCochesInicio);
     document.getElementById("filter-fuel").addEventListener("change", cargarCochesInicio);
     document.getElementById("filter-year").addEventListener("change", cargarCochesInicio);
 
-    // Modal
     document.getElementById("nav-btn-login").onclick = () => document.getElementById("auth-modal").classList.remove("hidden");
     document.getElementById("modal-close").onclick = () => document.getElementById("auth-modal").classList.add("hidden");
 
@@ -143,7 +135,6 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarSeccion('inicio');
     }
 
-    // Lógica agregada para el botón Cerrar Sesión (Imagen)
     document.getElementById("btn-logout").onclick = () => {
         usuarioActual = "Invitado";
         document.getElementById("nav-btn-login").classList.remove("hidden");
@@ -235,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
             modelo: document.getElementById("pub-modelo").value,
-            ciudad: document.getElementById("pub-ciudad").value,
+            ubicacion: document.getElementById("pub-ciudad").value, // <-- Sincronizado para el Backend
             ano: parseInt(document.getElementById("pub-ano").value),
             precio: document.getElementById("pub-precio").value,
             km: document.getElementById("pub-km").value,
@@ -284,9 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 });
 
-// ==========================================
-// 4. DETALLES Y CHATS GLOBALES
-// ==========================================
 window.cancelarEdicion = function() {
     idCocheEditando = null;
     document.getElementById("form-publicar").reset();
@@ -408,9 +396,6 @@ window.enviarMensaje = function() {
     chatMsg.scrollTop = chatMsg.scrollHeight;
 }
 
-// ==========================================
-// 5. MIS COCHES Y PANEL ADMIN
-// ==========================================
 window.cargarMisCoches = function() {
     const container = document.getElementById("list-mis-coches");
     const misCoches = dbCoches.filter(c => c.vendedor === usuarioActual);
