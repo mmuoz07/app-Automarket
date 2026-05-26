@@ -117,8 +117,9 @@ public class CocheDAO {
     }
 
     public Coche recuperarCoche(Coche coche) {
-        System.out.println("Entrpo en recuperar coche");
-        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND imgs = ? AND descripcion = ? AND estado = ?";
+        System.out.println("Entro en recuperar coche");
+        // Quitamos la comparación del campo 'imgs' de la consulta para evitar que pete MySQL
+        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ?";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlConsultarCoche)) { 
             ps.setString(1, coche.getMarca().trim());
@@ -127,10 +128,8 @@ public class CocheDAO {
             ps.setInt(4, coche.getPrecio());
             ps.setInt(5, coche.getKm());
             ps.setString(6, coche.getCombustible().trim());
-            String imagenesJson = gson.toJson(coche.getImgs());
-            ps.setString(7, imagenesJson);
-            ps.setString(8, coche.getDescripcion().trim());
-            ps.setString(9, coche.getEstado().trim());
+            ps.setString(7, coche.getDescripcion().trim());
+            ps.setString(8, coche.getEstado().trim());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Coche cocheMostrar = new Coche();
@@ -153,11 +152,11 @@ public class CocheDAO {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                throw new RuntimeException("Error al buscar vehículos en AutoMarket", e);
+                throw new RuntimeException("Error al recuperar vehículo en AutoMarket", e);
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
-            throw new RuntimeException("Error al buscar vehículos en AutoMarket", ex);
+            throw new RuntimeException("Error al recuperar vehículo en AutoMarket", ex);
         }
         return null;
     }
