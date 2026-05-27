@@ -63,9 +63,9 @@ function cargarCochesInicio() {
 
     const filtrados = dbCoches.filter(c => {
         const matchEstado = c.estado === "aprobado";
-        const busquedaTexto = (c.marca + " " + c.modelo + " " + c.ciudad).toLowerCase();
+        const busquedaTexto = (c.marca + " " + c.modelo + " " + (c.ciudad || c.ubicacion || "")).toLowerCase();
         const matchQuery = busquedaTexto.includes(query);
-        const matchFuel = fuel === "all" || c.motor === fuel;
+        const matchFuel = fuel === "all" || c.motor === fuel || c.combustible === fuel;
         const matchYear = c.ano >= yearMin;
         return matchEstado && matchQuery && matchFuel && matchYear;
     });
@@ -88,8 +88,8 @@ function cargarCochesInicio() {
                 <div class="car-specs">
                     <span><i class="far fa-calendar-alt"></i> ${c.ano}</span>
                     <span><i class="fas fa-tachometer-alt"></i> ${c.km} km</span>
-                    <span><i class="fas fa-gas-pump"></i> ${c.motor}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${c.ciudad}</span>
+                    <span><i class="fas fa-gas-pump"></i> ${c.motor || c.combustible}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${c.ciudad || c.ubicacion || 'No especificada'}</span>
                 </div>
                 <div class="car-footer">Vendedor: ${c.vendedor}</div>
             </div>
@@ -226,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
             modelo: document.getElementById("pub-modelo").value,
-            ubicacion: document.getElementById("pub-ciudad").value, // <-- Sincronizado para el Backend
+            ubicacion: document.getElementById("pub-ciudad").value,
             ano: parseInt(document.getElementById("pub-ano").value),
             precio: document.getElementById("pub-precio").value,
             km: document.getElementById("pub-km").value,
@@ -238,7 +238,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         try {
-            const response = await fetch("/api/crear-coches", {
+            // AJUSTE: Si estamos editando, llamamos de forma asíncrona al endpoint de Modificar (U)
+            // Si es un coche nuevo, llamamos al endpoint de Crear (C)
+            const endpoint = idCocheEditando !== null ? "/api/modificar-coche" : "/api/crear-coches";
+            
+            const response = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
                 body: JSON.stringify(nuevoCoche)
@@ -246,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (response.ok && data.ok) {
-                alert("Vehículo enviado correctamente al servidor.");
+                alert("Vehículo procesado correctamente en el servidor remoto.");
                 if (idCocheEditando !== null) {
                     const index = dbCoches.findIndex(c => c.id === idCocheEditando);
                     if (index !== -1) dbCoches[index] = nuevoCoche;
@@ -260,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert(data.mensaje || "Error del servidor al procesar el coche.");
             }
         } catch (err) {
-            console.error("Error al conectar con CrearCochesServlet:", err);
+            console.error("Error al conectar con el Backend:", err);
             alert("No se pudo conectar con el servidor. Se guardará en modo local temporal.");
             if (idCocheEditando !== null) {
                 const index = dbCoches.findIndex(c => c.id === idCocheEditando);
@@ -297,17 +301,17 @@ window.abrirDetalle = function(idBuscado) {
             </div>
             <div class="detalle-info">
                 <h2>${c.marca} ${c.modelo}</h2>
-                <p class="ubicacion"><i class="fas fa-map-marker-alt"></i> ${c.ciudad}</p>
+                <p class="ubicacion"><i class="fas fa-map-marker-alt"></i> ${c.ciudad || c.ubicacion || 'No especificada'}</p>
                 <div class="specs-grid">
                     <div class="spec-box"><span>Año</span><strong>${c.ano}</strong></div>
                     <div class="spec-box"><span>Kilómetros</span><strong>${c.km}</strong></div>
-                    <div class="spec-box"><span>Motor</span><strong>${c.motor}</strong></div>
+                    <div class="spec-box"><span>Motor</span><strong>${c.motor || c.combustible}</strong></div>
                     <div class="spec-box"><span>Cambio</span><strong>${c.transmision}</strong></div>
                 </div>
-                <div class="desc-box"><h3>Descripción</h3><p>${c.desc}</p></div>
+                <div class="desc-box"><h3>Descripción</h3><p>${c.desc || c.descripcion}</p></div>
                 <div class="vendedor-box">
-                    <div class="vendedor-nombre">${c.vendedor}</div>
-                    <button class="btn-dark-full" onclick="abrirChat('${c.vendedor}')">Enviar Mensaje</button>
+                    <div class="vendedor-nombre">${c.vendedor || 'Particular'}</div>
+                    <button class="btn-dark-full" onclick="abrirChat('${c.vendedor || 'Particular'}')">Enviar Mensaje</button>
                 </div>
             </div>
         </div>
@@ -407,11 +411,37 @@ window.cargarMisCoches = function() {
     container.innerHTML = misCoches.map(c => renderCarHorizontal(c, true)).join('');
 }
 
+// AJUSTE: Modificada para cumplir la "D" del CRUD mediante peticiones asíncronas fetch con then() y catch()
 window.eliminarCoche = function(id) {
     if(confirm("¿Seguro que quieres eliminar esta publicación?")) {
-        dbCoches = dbCoches.filter(c => c.id !== id);
-        guardarDatos();
-        cargarMisCoches();
+        fetch('/api/eliminar-coche', {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=UTF-8" },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Fallo en la comunicación con el servlet.");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.ok) {
+                alert(data.mensaje || "Eliminado de la base de datos MySQL.");
+                dbCoches = dbCoches.filter(c => c.id !== id);
+                guardarDatos();
+                cargarMisCoches();
+            } else {
+                alert("Error de validación: " + data.mensaje);
+            }
+        })
+        .catch(err => {
+            console.error("Fallo al eliminar:", err);
+            alert("No se pudo conectar con el backend. Eliminando en modo local.");
+            dbCoches = dbCoches.filter(c => c.id !== id);
+            guardarDatos();
+            cargarMisCoches();
+        });
     }
 }
 
@@ -457,12 +487,33 @@ function renderCarHorizontal(c, isPropietario = false, isAdmin = false) {
     `;
 }
 
+// AJUSTE: Modificada la pasarela de administración para sincronizar los cambios de estado (Update) con el Servidor
 window.cambiarEstado = (id, nuevoEstado) => {
     const coche = dbCoches.find(c => c.id === id);
     if(coche) {
-        coche.estado = nuevoEstado;
-        guardarDatos();
-        cargarPanelAdmin();
+        const cocheActualizado = { ...coche, estado: nuevoEstado, desc: coche.desc || coche.descripcion, motor: coche.motor || coche.combustible, ubicacion: coche.ciudad || coche.ubicacion };
+        
+        fetch('/api/modificar-coche', {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=UTF-8" },
+            body: JSON.stringify(cocheActualizado)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.ok) {
+                coche.estado = nuevoEstado;
+                guardarDatos();
+                cargarPanelAdmin();
+            } else {
+                alert("El servidor denegó la actualización: " + data.mensaje);
+            }
+        })
+        .catch(err => {
+            console.error("Error al actualizar estado en backend:", err);
+            coche.estado = nuevoEstado;
+            guardarDatos();
+            cargarPanelAdmin();
+        });
     }
 };
 
