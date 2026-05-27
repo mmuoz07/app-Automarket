@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement; // <--- Añadido para recuperar el ID autogenerado
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.reflect.Type;
@@ -46,7 +47,6 @@ public class CocheDAO {
 
     public List<Coche> buscarCoches(String textoBusqueda) {
         List<Coche> lista = new ArrayList<>();
-        
         String sql = "SELECT * FROM coches WHERE (marca LIKE ? OR modelo LIKE ?) AND (estado = 'Aprobado' OR estado = 'pendiente') ORDER BY marca ASC";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
@@ -80,11 +80,17 @@ public class CocheDAO {
         return lista;
     }
 
+    // =========================================================================
+    // MODIFICADO: Optimización del proceso de inserción y retorno dinámico de ID
+    // =========================================================================
     public Coche crearCoches(String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado) {
         System.out.println("Entro en crear coches");
         String sqlInsertar = "INSERT INTO coches (marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        // Pasamos el flag RETURN_GENERATED_KEYS para capturar el ID real de MySQL en Railway sin romper nada
         try (Connection conexion = obtenerConexion();
-             PreparedStatement insert = conexion.prepareStatement(sqlInsertar)) {
+             PreparedStatement insert = conexion.prepareStatement(sqlInsertar, Statement.RETURN_GENERATED_KEYS)) {
+            
             System.out.println("despues de la conexion");
             insert.setString(1, marca.trim());
             insert.setString(2, modelo.trim());
@@ -96,6 +102,7 @@ public class CocheDAO {
             insert.setString(7, imagenesJson);
             insert.setString(8, descripcion.trim());
             insert.setString(9, estado.trim());
+            
             insert.executeUpdate();
             System.out.println("✅ Coche insertado con éxito en la base de datos.");
 
@@ -110,7 +117,14 @@ public class CocheDAO {
             cocheMostrar.setDescripcion(descripcion);
             cocheMostrar.setEstado(estado);
 
-            return recuperarCoche(cocheMostrar);
+            // Obtenemos de forma limpia el ID autogenerado para evitar el bucle de recuperarCoche()
+            try (ResultSet generatedKeys = insert.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    cocheMostrar.setId(generatedKeys.getInt(1));
+                }
+            }
+            return cocheMostrar;
+
         } catch (SQLException e) {
             System.err.println("⚠️ Error SQL crítico en CocheDao insertar: " + e.getMessage());
         }
@@ -161,7 +175,6 @@ public class CocheDAO {
         return null;
     }
 
-    
     public boolean modificarCoche(int id, String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado) {
         System.out.println("Entro en modificar coche ID: " + id);
         String sqlUpdate = "UPDATE coches SET marca = ?, modelo = ?, ano = ?, precio = ?, km = ?, combustible = ?, imgs = ?, descripcion = ?, estado = ? WHERE id = ?";
@@ -190,7 +203,6 @@ public class CocheDAO {
         }
     }
 
-   
     public boolean eliminarCoche(int id) {
         System.out.println("Entro en eliminar coche ID: " + id);
         String sqlDelete = "DELETE FROM coches WHERE id = ?";
