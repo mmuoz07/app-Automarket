@@ -165,7 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 alert(data.mensaje || "Error al iniciar sesión.");
             }
         } catch (err) {
-            console.error("Error en login:", err);
             loguearUsuarioEnCliente(userVal, "USER");
         }
     };
@@ -221,8 +220,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const imagenesCargadas = await Promise.all(promesasImagenes);
 
+        // MODIFICADO: Bloqueo de inyección de ID temporal Date.now() si es una inserción limpia para evitar desbordar MySQL
         const nuevoCoche = {
-            id: idCocheEditando || Date.now(),
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
             modelo: document.getElementById("pub-modelo").value,
@@ -237,9 +236,12 @@ document.addEventListener("DOMContentLoaded", () => {
             vendedor: usuarioActual
         };
 
+        // Si estamos en flujo de edición, conservamos el ID real entero asignado
+        if (idCocheEditando !== null) {
+            nuevoCoche.id = idCocheEditando;
+        }
+
         try {
-            // AJUSTE: Si estamos editando, llamamos de forma asíncrona al endpoint de Modificar (U)
-            // Si es un coche nuevo, llamamos al endpoint de Crear (C)
             const endpoint = idCocheEditando !== null ? "/api/modificar-coche" : "/api/crear-coches";
             
             const response = await fetch(endpoint, {
@@ -251,11 +253,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok && data.ok) {
                 alert("Vehículo procesado correctamente en el servidor remoto.");
+                
+                // Si viene del servlet de creación, el backend nos devuelve el objeto coche con el ID autogenerado real de MySQL
+                const cocheProcesado = data.resultados ? data.resultados : nuevoCoche;
+                
                 if (idCocheEditando !== null) {
                     const index = dbCoches.findIndex(c => c.id === idCocheEditando);
-                    if (index !== -1) dbCoches[index] = nuevoCoche;
+                    if (index !== -1) dbCoches[index] = cocheProcesado;
                 } else {
-                    dbCoches.push(nuevoCoche);
+                    dbCoches.push(cocheProcesado);
                 }
                 guardarDatos();
                 cancelarEdicion();
@@ -266,10 +272,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error("Error al conectar con el Backend:", err);
             alert("No se pudo conectar con el servidor. Se guardará en modo local temporal.");
+            
+            // Fallback local seguro en caso de corte de red de red externa
             if (idCocheEditando !== null) {
                 const index = dbCoches.findIndex(c => c.id === idCocheEditando);
                 if (index !== -1) dbCoches[index] = nuevoCoche;
             } else {
+                nuevoCoche.id = Date.now(); // Solo se usa si no hay base de datos disponible
                 dbCoches.push(nuevoCoche);
             }
             guardarDatos();
@@ -411,7 +420,6 @@ window.cargarMisCoches = function() {
     container.innerHTML = misCoches.map(c => renderCarHorizontal(c, true)).join('');
 }
 
-// AJUSTE: Modificada para cumplir la "D" del CRUD mediante peticiones asíncronas fetch con then() y catch()
 window.eliminarCoche = function(id) {
     if(confirm("¿Seguro que quieres eliminar esta publicación?")) {
         fetch('/api/eliminar-coche', {
@@ -487,7 +495,6 @@ function renderCarHorizontal(c, isPropietario = false, isAdmin = false) {
     `;
 }
 
-// AJUSTE: Modificada la pasarela de administración para sincronizar los cambios de estado (Update) con el Servidor
 window.cambiarEstado = (id, nuevoEstado) => {
     const coche = dbCoches.find(c => c.id === id);
     if(coche) {

@@ -12,7 +12,7 @@ CREATE TABLE coches (
     combustible VARCHAR(30),          -- Diésel, Gasolina, etc.
     transmision VARCHAR(30),          -- Manual/Automático
     ubicacion VARCHAR(100),           -- Madrid, Barcelona...
-    imgs TEXT,          -- La URL de la foto del coche
+    imgs JSON,          -- La URL de la foto del coche
     descripcion TEXT,                 -- El texto largo de abajo
     estado VARCHAR(20) DEFAULT 'Pendiente', -- IMPORTANTE: Para el Admin
     publicado_por VARCHAR(100)        -- <--- ¡Quitado el 'Usuario Demo'!
