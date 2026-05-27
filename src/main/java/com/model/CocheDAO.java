@@ -46,7 +46,8 @@ public class CocheDAO {
 
     public List<Coche> buscarCoches(String textoBusqueda) {
         List<Coche> lista = new ArrayList<>();
-        String sql = "SELECT * FROM coches WHERE (marca LIKE ? OR modelo LIKE ?) AND estado = 'Aprobado' ORDER BY marca ASC";
+        
+        String sql = "SELECT * FROM coches WHERE (marca LIKE ? OR modelo LIKE ?) AND (estado = 'Aprobado' OR estado = 'pendiente') ORDER BY marca ASC";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
             String comodin = "%" + textoBusqueda + "%";
@@ -118,7 +119,6 @@ public class CocheDAO {
 
     public Coche recuperarCoche(Coche coche) {
         System.out.println("Entro en recuperar coche");
-        // Quitamos la comparación del campo 'imgs' de la consulta para evitar que pete MySQL
         String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ?";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlConsultarCoche)) { 
@@ -159,5 +159,51 @@ public class CocheDAO {
             throw new RuntimeException("Error al recuperar vehículo en AutoMarket", ex);
         }
         return null;
+    }
+
+    
+    public boolean modificarCoche(int id, String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado) {
+        System.out.println("Entro en modificar coche ID: " + id);
+        String sqlUpdate = "UPDATE coches SET marca = ?, modelo = ?, ano = ?, precio = ?, km = ?, combustible = ?, imgs = ?, descripcion = ?, estado = ? WHERE id = ?";
+        try (Connection conexion = obtenerConexion();
+             PreparedStatement ps = conexion.prepareStatement(sqlUpdate)) {
+            
+            ps.setString(1, marca.trim());
+            ps.setString(2, modelo.trim());
+            ps.setInt(3, ano);
+            ps.setInt(4, precio);
+            ps.setInt(5, km);
+            ps.setString(6, combustible.trim());
+            
+            String imagenesJson = gson.toJson(imgs);
+            ps.setString(7, imagenesJson);
+            ps.setString(8, descripcion.trim());
+            ps.setString(9, estado.trim());
+            ps.setInt(10, id);
+            
+            int filasAfectadas = ps.executeUpdate();
+            System.out.println("🔄 Resultado de modificación: " + (filasAfectadas > 0 ? "Éxito" : "No se encontró el ID"));
+            return filasAfectadas > 0;
+        } catch (SQLException e) {
+            System.err.println("⚠️ Error SQL crítico en CocheDao modificar: " + e.getMessage());
+            return false;
+        }
+    }
+
+   
+    public boolean eliminarCoche(int id) {
+        System.out.println("Entro en eliminar coche ID: " + id);
+        String sqlDelete = "DELETE FROM coches WHERE id = ?";
+        try (Connection conexion = obtenerConexion();
+             PreparedStatement ps = conexion.prepareStatement(sqlDelete)) {
+            
+            ps.setInt(1, id);
+            int filasAfectadas = ps.executeUpdate();
+            System.out.println("❌ Resultado de eliminación: " + (filasAfectadas > 0 ? "Éxito" : "No se encontró el ID"));
+            return filasAfectadas > 0;
+        } catch (SQLException e) {
+            System.err.println("⚠️ Error SQL crítico en CocheDao eliminar: " + e.getMessage());
+            return false;
+        }
     }
 }
