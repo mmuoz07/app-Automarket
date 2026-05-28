@@ -80,7 +80,7 @@ function cargarCochesInicio() {
     grid.innerHTML = filtrados.map(c => `
         <div class="car-card car-card-clickable" onclick="abrirDetalle(${c.id})">
             <div class="car-image-container">
-                <img src="${c.imgs[0]}" alt="${c.marca} ${c.modelo}">
+                <img src="${(c.imgs && c.imgs.length > 0) ? c.imgs[0] : 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80'}" alt="${c.marca} ${c.modelo}">
                 <span class="price-tag">€${c.precio}</span>
             </div>
             <div class="car-info">
@@ -165,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const passVal = document.getElementById("login-pass") ? document.getElementById("login-pass").value : "";
 
         try {
-            // CAMBIO: Ruta de fetch relativa sin la barra '/' inicial para compatibilidad Localhost/Railway
+            // CAMBIO: Ruta de fetch relativa para compatibilidad Localhost/Railway
             const response = await fetch("api/login-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
@@ -235,8 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const imagenesCargadas = await Promise.all(promesasImagenes);
 
-        // CAMBIO: Quitamos la inyección forzada del ID temporal 'Date.now()' para coches nuevos.
-        // MySQL generará el ID numérico real automáticamente mediante AUTO_INCREMENT.
         const nuevoCoche = {
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
@@ -249,16 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
             transmision: document.getElementById("pub-transmision").value,
             imgs: imagenesCargadas,
             desc: document.getElementById("pub-desc").value,
-            vendedor: usuarioActual // Envía el nombre del usuario logueado recuperado de la memoria
+            vendedor: usuarioActual 
         };
 
-        // Si estamos editando un coche existente, le adjuntamos su ID numérico real corto de MySQL
         if (idCocheEditando !== null) {
             nuevoCoche.id = idCocheEditando;
         }
 
         try {
-            // CAMBIO: Rutas dinámicas relativas sin la barra '/' inicial
             const endpoint = idCocheEditando !== null ? "api/modificar-coche" : "api/crear-coches";
             
             const response = await fetch(endpoint, {
@@ -270,7 +266,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok && data.ok) {
                 alert("Vehículo procesado correctamente en el servidor remoto.");
-                // Recogemos el objeto coche con el ID definitivo asignado por la base de datos remota
                 const cocheProcesado = data.resultados ? data.resultados : nuevoCoche;
                 
                 if (idCocheEditando !== null) {
@@ -293,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const index = dbCoches.findIndex(c => c.id === idCocheEditando);
                 if (index !== -1) dbCoches[index] = nuevoCoche;
             } else {
-                nuevoCoche.id = Date.now(); // Fallback de emergencia local por si no hay servidor
+                nuevoCoche.id = Date.now();
                 dbCoches.push(nuevoCoche);
             }
             guardarDatos();
@@ -313,8 +308,8 @@ window.abrirDetalle = function(idBuscado) {
     const c = dbCoches.find(item => item.id === idBuscado);
     if (!c) return;
     
-    let mainImg = `<img src="${c.imgs[0]}" style="width:100%; border-radius:1rem;">`;
-    let restImgs = c.imgs.length > 1 ? `<div class="multi-img-grid">` + c.imgs.slice(1).map(i => `<img src="${i}">`).join('') + `</div>` : '';
+    let mainImg = `<img src="${(c.imgs && c.imgs.length > 0) ? c.imgs[0] : ''}" style="width:100%; border-radius:1rem;">`;
+    let restImgs = (c.imgs && c.imgs.length > 1) ? `<div class="multi-img-grid">` + c.imgs.slice(1).map(i => `<img src="${i}">`).join('') + `</div>` : '';
 
     document.getElementById("detalle-coche-content").innerHTML = `
         <div class="detalle-grid">
@@ -330,9 +325,9 @@ window.abrirDetalle = function(idBuscado) {
                     <div class="spec-box"><span>Año</span><strong>${c.ano}</strong></div>
                     <div class="spec-box"><span>Kilómetros</span><strong>${c.km}</strong></div>
                     <div class="spec-box"><span>Motor</span><strong>${c.motor || c.combustible}</strong></div>
-                    <div class="spec-box"><span>Cambio</span><strong>${c.transmision}</strong></div>
+                    <div class="spec-box"><span>Cambio</span><strong>${c.transmision || 'No especificado'}</strong></div>
                 </div>
-                <div class="desc-box"><h3>Descripción</h3><p>${c.desc || c.descripcion}</p></div>
+                <div class="desc-box"><h3>Descripción</h3><p>${c.desc || c.descripcion || ''}</p></div>
                 <div class="vendedor-box">
                     <div class="vendedor-nombre">${c.vendedor || 'Particular'}</div>
                     <button class="btn-dark-full" onclick="abrirChat('${c.vendedor || 'Particular'}')">Enviar Mensaje</button>
@@ -437,7 +432,6 @@ window.cargarMisCoches = function() {
 
 window.eliminarCoche = function(id) {
     if(confirm("¿Seguro que quieres eliminar esta publicación?")) {
-        // CAMBIO: Usamos ruta relativa "api/eliminar-coche" (sin la barra '/') para evitar errores 404 en localhost
         fetch('api/eliminar-coche', {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=UTF-8" },
@@ -485,26 +479,66 @@ window.cargarPanelAdmin = function() {
     document.getElementById("list-admin-rechazados").innerHTML = rechazados.length ? rechazados.map(c => renderCarHorizontal(c, false, true)).join('') : "<p style='color:#666;'>No hay coches rechazados.</p>";
 }
 
+// NUEVA FUNCIÓN: Mapea los datos del vehículo y los carga en los inputs para la sección de edición (U)
+window.abrirEditarCoche = function(idRealBBDD) {
+    idCocheEditando = idRealBBDD;
+    const coche = dbCoches.find(c => c.id === idRealBBDD);
+    
+    if (!coche) {
+        alert("No se han podido mapear los datos del vehículo.");
+        return;
+    }
+    
+    document.getElementById("pub-marca").value = coche.marca;
+    document.getElementById("pub-modelo").value = coche.modelo;
+    document.getElementById("pub-ciudad").value = coche.ciudad || coche.ubicacion || "";
+    document.getElementById("pub-ano").value = coche.ano;
+    document.getElementById("pub-precio").value = coche.precio;
+    document.getElementById("pub-km").value = coche.km;
+    document.getElementById("pub-motor").value = coche.motor || coche.combustible || "";
+    document.getElementById("pub-transmision").value = coche.transmision || "";
+    document.getElementById("pub-desc").value = coche.desc || coche.descripcion || "";
+    
+    mostrarSeccion('publicar');
+};
+
 function renderCarHorizontal(c, isPropietario = false, isAdmin = false) {
     let actions = "";
+    
+    // Mapeo seguro de la imagen desde el array de la base de datos relacional
+    const imagenUrl = (c.imgs && c.imgs.length > 0) ? c.imgs[0] : 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
+    
+    // CAMBIO: Agregado el botón "Editar" condicional visible únicamente para el propietario que publicó el coche
     if(isPropietario) {
-        actions = `<button class="btn-action btn-reject" onclick="eliminarCoche(${c.id})">Eliminar</button>`;
+        actions = `
+            <button class="btn-action btn-edit" onclick="abrirEditarCoche(${c.id})" style="margin-right: 8px; cursor: pointer;">
+                <i class="fas fa-edit"></i> Editar
+            </button>
+            <button class="btn-action btn-reject" onclick="eliminarCoche(${c.id})">Eliminar</button>
+        `;
     }
     if(isAdmin) {
         if(c.estado !== 'aprobado') actions += `<button class="btn-action btn-approve" onclick="cambiarEstado(${c.id}, 'aprobado')">Aprobar</button>`;
         if(c.estado !== 'rechazado') actions += `<button class="btn-action btn-reject" onclick="cambiarEstado(${c.id}, 'rechazado')">Rechazar (Imágenes/Datos)</button>`;
     }
 
+    // CAMBIO: Manejo seguro de atributos de texto con operadores lógicos de respaldo (Evita el 'undefined')
+    const textoAno = c.ano || '2024';
+    const textoKm = c.km || '0';
+    const textoMotor = c.motor || c.combustible || 'Gasolina';
+    const textoCambio = c.transmision || 'No especificado';
+
     return `
         <div class="car-card-horizontal">
-            <img src="${c.imgs[0]}">
+            <img src="${imagenUrl}" alt="${c.marca || 'Vehículo'}">
             <div class="car-card-content">
                 <div class="car-header-flex">
-                    <h3>${c.marca} ${c.modelo}</h3>
-                    <span class="car-price-admin">€${c.precio}</span>
+                    <h3>${c.marca || ''} ${c.modelo || ''}</h3>
+                    <span class="car-price-admin">€${c.precio || '0'}</span>
                 </div>
-                ${isAdmin ? `<p style="color: #666; margin-bottom:10px; font-size: 0.9rem;">Vendedor: ${c.vendedor}</p>` : ''}
-                <span class="status-badge status-${c.estado}">${c.estado.toUpperCase()}</span>
+                <p style="color: #666; margin-bottom:10px; font-size: 0.9rem;">${textoAno} • ${textoKm} km • ${textoMotor} • Cambio: ${textoCambio}</p>
+                ${isAdmin ? `<p style="color: #666; margin-bottom:10px; font-size: 0.9rem;">Vendedor: ${c.vendedor || 'Particular'}</p>` : ''}
+                <span class="status-badge status-${c.estado || 'pendiente'}">${(c.estado || 'pendiente').toUpperCase()}</span>
                 <div class="car-card-actions">${actions}</div>
             </div>
         </div>
@@ -516,7 +550,6 @@ window.cambiarEstado = (id, nuevoEstado) => {
     if(coche) {
         const cocheActualizado = { ...coche, estado: nuevoEstado, desc: coche.desc || coche.descripcion, motor: coche.motor || coche.combustible, ubicacion: coche.ciudad || coche.ubicacion };
         
-        // CAMBIO: Ruta de fetch relativa "api/modificar-coche" para la pasarela de administración
         fetch('api/modificar-coche', {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=UTF-8" },
