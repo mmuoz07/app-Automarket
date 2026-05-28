@@ -65,7 +65,9 @@ public class CocheDAO {
                     coche.setPrecio(rs.getInt("precio"));
                     coche.setKm(rs.getInt("km"));
                     coche.setCombustible(rs.getString("combustible"));
+                    coche.setTransmision(rs.getString("transmision")); // ✅ CORREGIDO: Mapeada la transmisión en búsquedas
                     coche.setUbicacion(rs.getString("ubicacion"));
+                    coche.setCiudad(rs.getString("ubicacion")); // Respaldo para el frontend de JavaScript
 
                     String jsonImgs = rs.getString("imgs");
                     Type tipoLista = new TypeToken<ArrayList<String>>(){}.getType();
@@ -74,7 +76,7 @@ public class CocheDAO {
 
                     coche.setDescripcion(rs.getString("descripcion"));
                     coche.setEstado(rs.getString("estado"));
-                    coche.setVendedor(rs.getString("publicado_por"));
+                    coche.setVendedor(rs.getString("publicado_por")); // ✅ CORREGIDO: Mapeado el vendedor real desde MySQL
                     lista.add(coche);
                 }
             }
@@ -98,7 +100,6 @@ public class CocheDAO {
             insert.setInt(5, km);
             insert.setString(6, combustible.trim());
 
-
             String imagenesJson = gson.toJson(imgs);
             insert.setString(7, imagenesJson);
 
@@ -120,7 +121,8 @@ public class CocheDAO {
             cocheMostrar.setDescripcion(descripcion);
             cocheMostrar.setEstado(estado);
             cocheMostrar.setVendedor(vendedor);
-             cocheMostrar.setUbicacion(ubicacion);
+            cocheMostrar.setUbicacion(ubicacion);
+            cocheMostrar.setCiudad(ubicacion);
 
             try (ResultSet generatedKeys = insert.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -136,7 +138,8 @@ public class CocheDAO {
 
     public Coche recuperarCoche(Coche coche) {
         System.out.println("Entro en recuperar coche");
-        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ? AND publicacion_por = ? AND  ubicacion = ?";
+        // ✅ CORREGIDO: publicacion_por cambiado a publicado_por para coincidir con el script SQL
+        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ? AND publicado_por = ? AND ubicacion = ?";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlConsultarCoche)) { 
             ps.setString(1, coche.getMarca().trim());
@@ -146,28 +149,34 @@ public class CocheDAO {
             ps.setInt(5, coche.getKm());
             ps.setString(6, coche.getCombustible().trim());
             ps.setString(7, coche.getDescripcion().trim());
+            
+            // ✅ CORREGIDO: Arreglados los índices de parámetros secuenciales (8, 9 y 10) que estaban repetidos como 8
             ps.setString(8, coche.getEstado().trim());
-            ps.setString(8, coche.getVendedor().trim());
-            ps.setString(8, coche.getUbicacion().trim());
+            ps.setString(9, coche.getVendedor().trim());
+            ps.setString(10, coche.getUbicacion().trim());
+            
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Coche cocheMostrar = new Coche();
                     cocheMostrar.setId(rs.getInt("id"));
                     cocheMostrar.setMarca(rs.getString("marca"));
                     cocheMostrar.setModelo(rs.getString("modelo"));
-                    coche.setTransmision(rs.getString("transmision"));
+                    cocheMostrar.setTransmision(rs.getString("transmision")); // ✅ CORREGIDO: Asignado correctamente a cocheMostrar
                     cocheMostrar.setAno(rs.getInt("ano"));
                     cocheMostrar.setPrecio(rs.getInt("precio"));
                     cocheMostrar.setKm(rs.getInt("km"));
                     cocheMostrar.setCombustible(rs.getString("combustible"));
                     cocheMostrar.setUbicacion(rs.getString("ubicacion"));
+                    cocheMostrar.setCiudad(rs.getString("ubicacion")); // Sincronización frontend
+                    
                     String jsonImgs = rs.getString("imgs");
                     Type tipoLista = new TypeToken<ArrayList<String>>(){}.getType();
                     List<String> listaImgs = gson.fromJson(jsonImgs, tipoLista);
                     cocheMostrar.setImgs(listaImgs);
+                    
                     cocheMostrar.setDescripcion(rs.getString("descripcion"));
                     cocheMostrar.setEstado(rs.getString("estado"));
-                    cocheMostrar.setVendedor(rs.getString("vendedor"));
+                    cocheMostrar.setVendedor(rs.getString("publicado_por")); // ✅ CORREGIDO: Lectura desde la columna correcta publicado_por
                     System.out.println("Devuelvo coche");
                     return cocheMostrar;
                 }
