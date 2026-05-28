@@ -85,9 +85,9 @@ public class CocheDAO {
         return lista;
     }
 
-    public Coche crearCoches(String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado, String vendedor) {
+    public Coche crearCoches(String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado, String vendedor, String ubicacion) {
         System.out.println("Entro en crear coches");
-        String sqlInsertar = "INSERT INTO coches (marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, publicado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlInsertar = "INSERT INTO coches (marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, publicado_por, ubicacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conexion = obtenerConexion();
              PreparedStatement insert = conexion.prepareStatement(sqlInsertar, Statement.RETURN_GENERATED_KEYS)) {
@@ -105,6 +105,7 @@ public class CocheDAO {
             insert.setString(8, descripcion.trim());
             insert.setString(9, estado.trim());
             insert.setString(10, vendedor.trim());
+            insert.setString(11, ubicacion.trim());
             insert.executeUpdate();
             System.out.println("✅ Coche insertado con éxito en la base de datos.");
 
@@ -119,6 +120,7 @@ public class CocheDAO {
             cocheMostrar.setDescripcion(descripcion);
             cocheMostrar.setEstado(estado);
             cocheMostrar.setVendedor(vendedor);
+             cocheMostrar.setUbicacion(ubicacion);
 
             try (ResultSet generatedKeys = insert.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -134,7 +136,7 @@ public class CocheDAO {
 
     public Coche recuperarCoche(Coche coche) {
         System.out.println("Entro en recuperar coche");
-        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ?";
+        String sqlConsultarCoche = "SELECT * FROM coches WHERE marca = ? AND modelo = ? AND ano = ? AND precio = ? AND km = ? AND combustible = ? AND descripcion = ? AND estado = ? AND publicacion_por = ? AND  ubicacion = ?";
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlConsultarCoche)) { 
             ps.setString(1, coche.getMarca().trim());
@@ -145,6 +147,8 @@ public class CocheDAO {
             ps.setString(6, coche.getCombustible().trim());
             ps.setString(7, coche.getDescripcion().trim());
             ps.setString(8, coche.getEstado().trim());
+            ps.setString(8, coche.getVendedor().trim());
+            ps.setString(8, coche.getUbicacion().trim());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Coche cocheMostrar = new Coche();
@@ -162,6 +166,7 @@ public class CocheDAO {
                     cocheMostrar.setImgs(listaImgs);
                     cocheMostrar.setDescripcion(rs.getString("descripcion"));
                     cocheMostrar.setEstado(rs.getString("estado"));
+                    cocheMostrar.setVendedor(rs.getString("vendedor"));
                     System.out.println("Devuelvo coche");
                     return cocheMostrar;
                 }

@@ -47,6 +47,7 @@ public class CrearCochesServlet extends HttpServlet {
             String descripcion = "";
             List<String> imgs = new ArrayList<>();
             String vendedor = "";
+            String ubicacion = "";
 
             if (datos != null) {
                 if (datos.has("marca") && !datos.get("marca").isJsonNull()) {
@@ -89,9 +90,13 @@ public class CrearCochesServlet extends HttpServlet {
                 if(datos.has("vendedor") && !datos.get("vendedor").isJsonNull()) {
                     vendedor = datos.get("vendedor").getAsString();
                 }
+
+                if(datos.has("ubicacion") && !datos.get("ubicacion").isJsonNull()) {
+                    ubicacion = datos.get("ubicacion").getAsString();
+                }
             }
 
-            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, vendedor);
+            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, vendedor, ubicacion);
 
             Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("ok", true);
