@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement; // <--- Añadido para recuperar el ID autogenerado
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.lang.reflect.Type;
@@ -48,11 +48,13 @@ public class CocheDAO {
     public List<Coche> buscarCoches(String textoBusqueda) {
         List<Coche> lista = new ArrayList<>();
         String sql = "SELECT * FROM coches WHERE (marca LIKE ? OR modelo LIKE ?) AND (estado = 'Aprobado' OR estado = 'pendiente') ORDER BY marca ASC";
+
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sql)) {
             String comodin = "%" + textoBusqueda + "%";
             ps.setString(1, comodin);
             ps.setString(2, comodin);
+
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Coche coche = new Coche();
@@ -64,12 +66,15 @@ public class CocheDAO {
                     coche.setKm(rs.getInt("km"));
                     coche.setCombustible(rs.getString("combustible"));
                     coche.setUbicacion(rs.getString("ubicacion"));
+
                     String jsonImgs = rs.getString("imgs");
                     Type tipoLista = new TypeToken<ArrayList<String>>(){}.getType();
                     List<String> listaImgs = gson.fromJson(jsonImgs, tipoLista);
                     coche.setImgs(listaImgs);
+
                     coche.setDescripcion(rs.getString("descripcion"));
                     coche.setEstado(rs.getString("estado"));
+                    coche.setVendedor(rs.getString("publicado_por"));
                     lista.add(coche);
                 }
             }
@@ -80,29 +85,26 @@ public class CocheDAO {
         return lista;
     }
 
-    // =========================================================================
-    // MODIFICADO: Optimización del proceso de inserción y retorno dinámico de ID
-    // =========================================================================
-    public Coche crearCoches(String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado) {
+    public Coche crearCoches(String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado, String vendedor) {
         System.out.println("Entro en crear coches");
-        String sqlInsertar = "INSERT INTO coches (marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        // Pasamos el flag RETURN_GENERATED_KEYS para capturar el ID real de MySQL en Railway sin romper nada
+        String sqlInsertar = "INSERT INTO coches (marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, publicado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         try (Connection conexion = obtenerConexion();
              PreparedStatement insert = conexion.prepareStatement(sqlInsertar, Statement.RETURN_GENERATED_KEYS)) {
-            
-            System.out.println("despues de la conexion");
             insert.setString(1, marca.trim());
             insert.setString(2, modelo.trim());
             insert.setInt(3, ano);
             insert.setInt(4, precio);
             insert.setInt(5, km);
             insert.setString(6, combustible.trim());
+
+
             String imagenesJson = gson.toJson(imgs);
             insert.setString(7, imagenesJson);
+
             insert.setString(8, descripcion.trim());
             insert.setString(9, estado.trim());
-            
+            insert.setString(10, vendedor.trim());
             insert.executeUpdate();
             System.out.println("✅ Coche insertado con éxito en la base de datos.");
 
@@ -116,15 +118,14 @@ public class CocheDAO {
             cocheMostrar.setImgs(imgs);
             cocheMostrar.setDescripcion(descripcion);
             cocheMostrar.setEstado(estado);
+            cocheMostrar.setVendedor(vendedor);
 
-            // Obtenemos de forma limpia el ID autogenerado para evitar el bucle de recuperarCoche()
             try (ResultSet generatedKeys = insert.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     cocheMostrar.setId(generatedKeys.getInt(1));
                 }
             }
             return cocheMostrar;
-
         } catch (SQLException e) {
             System.err.println("⚠️ Error SQL crítico en CocheDao insertar: " + e.getMessage());
         }
@@ -178,22 +179,23 @@ public class CocheDAO {
     public boolean modificarCoche(int id, String marca, String modelo, int ano, int precio, int km, String combustible, List<String> imgs, String descripcion, String estado) {
         System.out.println("Entro en modificar coche ID: " + id);
         String sqlUpdate = "UPDATE coches SET marca = ?, modelo = ?, ano = ?, precio = ?, km = ?, combustible = ?, imgs = ?, descripcion = ?, estado = ? WHERE id = ?";
+
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlUpdate)) {
-            
             ps.setString(1, marca.trim());
             ps.setString(2, modelo.trim());
             ps.setInt(3, ano);
             ps.setInt(4, precio);
             ps.setInt(5, km);
             ps.setString(6, combustible.trim());
-            
+
             String imagenesJson = gson.toJson(imgs);
             ps.setString(7, imagenesJson);
+
             ps.setString(8, descripcion.trim());
             ps.setString(9, estado.trim());
             ps.setInt(10, id);
-            
+
             int filasAfectadas = ps.executeUpdate();
             System.out.println("🔄 Resultado de modificación: " + (filasAfectadas > 0 ? "Éxito" : "No se encontró el ID"));
             return filasAfectadas > 0;
@@ -206,9 +208,9 @@ public class CocheDAO {
     public boolean eliminarCoche(int id) {
         System.out.println("Entro en eliminar coche ID: " + id);
         String sqlDelete = "DELETE FROM coches WHERE id = ?";
+
         try (Connection conexion = obtenerConexion();
              PreparedStatement ps = conexion.prepareStatement(sqlDelete)) {
-            
             ps.setInt(1, id);
             int filasAfectadas = ps.executeUpdate();
             System.out.println("❌ Resultado de eliminación: " + (filasAfectadas > 0 ? "Éxito" : "No se encontró el ID"));

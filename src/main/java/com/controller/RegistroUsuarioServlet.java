@@ -17,7 +17,6 @@ import com.model.UsuarioDAO;
 
 @WebServlet("/api/registrar-usuario")
 public class RegistroUsuarioServlet extends HttpServlet {
-
     private final UsuarioDAO usuarioDAO = new UsuarioDAO();
     private final Gson gson = new Gson();
 
@@ -47,7 +46,7 @@ public class RegistroUsuarioServlet extends HttpServlet {
                 return;
             }
 
-            String username = datos.get("username"); 
+            String username = datos.get("username");
             String nombre = datos.get("nombre") != null ? datos.get("nombre") : username; 
             String apellidos = datos.get("apellidos") != null ? datos.get("apellidos") : "No especificado";
             String email = datos.get("email");
@@ -69,19 +68,16 @@ public class RegistroUsuarioServlet extends HttpServlet {
             if (nuevoUsuario != null) {
                 HttpSession session = request.getSession(true); 
                 session.setAttribute("usuarioLogueado", nuevoUsuario);
-
                 response.setStatus(HttpServletResponse.SC_CREATED); 
                 respuestaJson.put("ok", true);
                 respuestaJson.put("mensaje", "¡Cuenta creada y sesión iniciada!");
-                // MODIFICADO: Eliminada la línea que llamaba a nuevoUsuario.getUser()
             } else {
-                response.setStatus(HttpServletResponse.SC_CONFLICT); 
+                response.setStatus(HttpServletResponse.SC_CONFLICT);
                 respuestaJson.put("ok", false);
                 respuestaJson.put("mensaje", "El nombre de usuario o correo electrónico ya están en uso.");
             }
-
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             respuestaJson.put("ok", false);
             respuestaJson.put("mensaje", "Error crítico en el servidor: " + e.getMessage());
         }

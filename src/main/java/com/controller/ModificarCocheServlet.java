@@ -36,7 +36,7 @@ public class ModificarCocheServlet extends HttpServlet {
             }
 
             JsonObject datos = gson.fromJson(jsonRecibido.toString(), JsonObject.class);
-            
+
             if (datos == null || !datos.has("id")) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 respuesta.put("ok", false);
@@ -49,17 +49,17 @@ public class ModificarCocheServlet extends HttpServlet {
             String marca = datos.has("marca") ? datos.get("marca").getAsString() : "";
             String modelo = datos.has("modelo") ? datos.get("modelo").getAsString() : "";
             int ano = datos.has("ano") ? datos.get("ano").getAsInt() : 0;
-            
+
             int precio = 0;
             if (datos.has("precio")) {
                 precio = Integer.parseInt(datos.get("precio").getAsString().replace(".", ""));
             }
-            
+
             int km = 0;
             if (datos.has("km")) {
                 km = Integer.parseInt(datos.get("km").getAsString().replace(".", ""));
             }
-            
+
             String combustible = datos.has("motor") ? datos.get("motor").getAsString() : "";
             String descripcion = datos.has("desc") ? datos.get("desc").getAsString() : "";
             String estado = datos.has("estado") ? datos.get("estado").getAsString() : "pendiente";
@@ -80,12 +80,12 @@ public class ModificarCocheServlet extends HttpServlet {
                 respuesta.put("ok", false);
                 respuesta.put("mensaje", "No se pudo actualizar el vehículo en la base de datos.");
             }
-
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             respuesta.put("ok", false);
             respuesta.put("mensaje", "Error al modificar vehículo: " + e.getMessage());
         }
+
         response.getWriter().write(gson.toJson(respuesta));
     }
 }

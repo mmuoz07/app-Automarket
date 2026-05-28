@@ -220,7 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const imagenesCargadas = await Promise.all(promesasImagenes);
 
-        // MODIFICADO: Bloqueo de inyección de ID temporal Date.now() si es una inserción limpia para evitar desbordar MySQL
         const nuevoCoche = {
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
@@ -236,7 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
             vendedor: usuarioActual
         };
 
-        // Si estamos en flujo de edición, conservamos el ID real entero asignado
         if (idCocheEditando !== null) {
             nuevoCoche.id = idCocheEditando;
         }
@@ -253,8 +251,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok && data.ok) {
                 alert("Vehículo procesado correctamente en el servidor remoto.");
-                
-                // Si viene del servlet de creación, el backend nos devuelve el objeto coche con el ID autogenerado real de MySQL
                 const cocheProcesado = data.resultados ? data.resultados : nuevoCoche;
                 
                 if (idCocheEditando !== null) {
@@ -273,12 +269,11 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error al conectar con el Backend:", err);
             alert("No se pudo conectar con el servidor. Se guardará en modo local temporal.");
             
-            // Fallback local seguro en caso de corte de red de red externa
             if (idCocheEditando !== null) {
                 const index = dbCoches.findIndex(c => c.id === idCocheEditando);
                 if (index !== -1) dbCoches[index] = nuevoCoche;
             } else {
-                nuevoCoche.id = Date.now(); // Solo se usa si no hay base de datos disponible
+                nuevoCoche.id = Date.now();
                 dbCoches.push(nuevoCoche);
             }
             guardarDatos();

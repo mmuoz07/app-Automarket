@@ -10,10 +10,8 @@
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
 
-    <!-- REGISTRO DEL SERVLET (Esto es lo que te falta) -->
     <servlet>
         <servlet-name>CocheController</servlet-name>
-        <!-- Asegúrate de que esta ruta coincida exactamente con tu paquete Java -->
         <servlet-class>com.modelo.controller.BuscarCochesServlet</servlet-class>
     </servlet>
     

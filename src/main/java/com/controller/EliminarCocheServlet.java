@@ -54,12 +54,12 @@ public class EliminarCocheServlet extends HttpServlet {
                 respuesta.put("ok", false);
                 respuesta.put("mensaje", "El vehículo no existe o no pudo ser eliminado.");
             }
-
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             respuesta.put("ok", false);
             respuesta.put("mensaje", "Error al eliminar vehículo: " + e.getMessage());
         }
+        
         response.getWriter().write(gson.toJson(respuesta));
     }
 }

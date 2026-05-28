@@ -30,6 +30,7 @@ public class CrearCochesServlet extends HttpServlet {
             StringBuilder jsonRecibido = new StringBuilder();
             BufferedReader reader = request.getReader();
             String linea;
+            
             while ((linea = reader.readLine()) != null) {
                 jsonRecibido.append(linea);
             }
@@ -45,53 +46,67 @@ public class CrearCochesServlet extends HttpServlet {
             String combustible = "";
             String descripcion = "";
             List<String> imgs = new ArrayList<>();
+            String vendedor = "";
 
             if (datos != null) {
                 if (datos.has("marca") && !datos.get("marca").isJsonNull()) {
                     marca = datos.get("marca").getAsString();
                 }
+                
                 if (datos.has("modelo") && !datos.get("modelo").isJsonNull()) {
                     modelo = datos.get("modelo").getAsString();
                 }
+                
                 if (datos.has("ano") && !datos.get("ano").isJsonNull()) {
                     ano = datos.get("ano").getAsInt();
                 }
+                
                 if (datos.has("precio") && !datos.get("precio").isJsonNull()) {
                     String precioTexto = datos.get("precio").getAsString();
                     precioTexto = precioTexto.replace(".", "");
                     precio = Integer.parseInt(precioTexto);
                 }
+                
                 if (datos.has("km") && !datos.get("km").isJsonNull()) {
                     String kmTexto = datos.get("km").getAsString();
                     kmTexto = kmTexto.replace(".", "");
                     km = Integer.parseInt(kmTexto);
                 }
+                
                 if (datos.has("motor") && !datos.get("motor").isJsonNull()) {
                     combustible = datos.get("motor").getAsString();
                 }
+                
                 if (datos.has("desc") && !datos.get("desc").isJsonNull()) {
                     descripcion = datos.get("desc").getAsString();
                 }
+                
                 if (datos.has("imgs") && !datos.get("imgs").isJsonNull()) {
                     java.lang.reflect.Type tipoLista = new com.google.gson.reflect.TypeToken<ArrayList<String>>(){}.getType();
                     imgs = gson.fromJson(datos.get("imgs"), tipoLista);
                 }
+
+                if(datos.has("vendedor") && !!datos.get("vendedor").isJsonNull()) {
+                    vendedor = datos.get("vendedor").getAsString();
+                }
             }
 
-            // Invocar el DAO con la firma sincronizada de datos de forma segura
-            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado);
+            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, vendedor);
 
             Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("ok", true);
             respuesta.put("resultados", cocheInsertado);
+            
             response.getWriter().write(gson.toJson(respuesta));
 
         } catch (Exception e) {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            
             Map<String, Object> error = new HashMap<>();
             error.put("ok", false);
             error.put("mensaje", "Error al añadir vehículo: " + e.getMessage());
+            
             response.getWriter().write(gson.toJson(error));
         }
     }

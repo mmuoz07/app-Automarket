@@ -6,12 +6,10 @@ public class Usuario {
     private String apellidos;
     private String email;
     private String password;
-    private String user; // Guarda el tipo de cuenta: 'user' o 'admin'
+    private String user;
 
-    // Constructor vacío obligatorio
     public Usuario() {}
 
-    // Constructor completo actualizado
     public Usuario(int id, String nombre, String apellidos, String email, String password, String user) {
         this.id = id;
         this.nombre = nombre;
@@ -21,7 +19,6 @@ public class Usuario {
         this.user = user;
     }
 
-    // Getters y Setters obligatorios
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
