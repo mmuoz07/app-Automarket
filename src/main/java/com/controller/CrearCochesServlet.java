@@ -48,6 +48,7 @@ public class CrearCochesServlet extends HttpServlet {
             List<String> imgs = new ArrayList<>();
             String vendedor = "";
             String ubicacion = "";
+            String transmision = ""; // ✅ AÑADIDO: Variable local para la transmisión
 
             if (datos != null) {
                 if (datos.has("marca") && !datos.get("marca").isJsonNull()) {
@@ -94,9 +95,15 @@ public class CrearCochesServlet extends HttpServlet {
                 if(datos.has("ubicacion") && !datos.get("ubicacion").isJsonNull()) {
                     ubicacion = datos.get("ubicacion").getAsString();
                 }
+
+                // ✅ AÑADIDO: Extracción segura del campo transmisión enviado por el Fetch
+                if(datos.has("transmision") && !datos.get("transmision").isJsonNull()) {
+                    transmision = datos.get("transmision").getAsString();
+                }
             }
 
-            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, vendedor, ubicacion);
+            // ✅ CORREGIDO: Ahora pasamos exactamente los 12 parámetros requeridos por tu CocheDAO.java
+            Coche cocheInsertado = cocheDAO.crearCoches(marca, modelo, ano, precio, km, combustible, imgs, descripcion, estado, vendedor, ubicacion, transmision);
 
             Map<String, Object> respuesta = new HashMap<>();
             respuesta.put("ok", true);
