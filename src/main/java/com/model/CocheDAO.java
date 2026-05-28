@@ -155,6 +155,7 @@ public class CocheDAO {
                     cocheMostrar.setId(rs.getInt("id"));
                     cocheMostrar.setMarca(rs.getString("marca"));
                     cocheMostrar.setModelo(rs.getString("modelo"));
+                    coche.setTransmision(rs.getString("transmision"));
                     cocheMostrar.setAno(rs.getInt("ano"));
                     cocheMostrar.setPrecio(rs.getInt("precio"));
                     cocheMostrar.setKm(rs.getInt("km"));

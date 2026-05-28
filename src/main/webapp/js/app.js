@@ -98,7 +98,14 @@ function cargarCochesInicio() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    cargarCochesInicio();
+    // CAMBIO: Al arrancar, comprobamos si ya había una sesión guardada del usuario en el navegador
+    const sesionGuardada = sessionStorage.getItem('sesionUsuarioMarket');
+    if (sesionGuardada) {
+        loguearUsuarioEnCliente(sesionGuardada, sesionGuardada.toLowerCase() === "admin" ? "ADMIN" : "USER");
+    } else {
+        cargarCochesInicio();
+    }
+
     document.getElementById("main-search").addEventListener("input", cargarCochesInicio);
     document.getElementById("filter-fuel").addEventListener("change", cargarCochesInicio);
     document.getElementById("filter-year").addEventListener("change", cargarCochesInicio);
@@ -121,6 +128,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function loguearUsuarioEnCliente(username, rol) {
         usuarioActual = username;
+        // CAMBIO: Guardamos el usuario en sessionStorage para que no se pierda al navegar
+        sessionStorage.setItem('sesionUsuarioMarket', username);
+
         document.getElementById("auth-modal").classList.add("hidden");
         document.getElementById("nav-btn-login").classList.add("hidden");
         document.getElementById("nav-user-profile").classList.remove("hidden");
@@ -137,6 +147,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("btn-logout").onclick = () => {
         usuarioActual = "Invitado";
+        // CAMBIO: Eliminamos al usuario de la memoria al cerrar sesión
+        sessionStorage.removeItem('sesionUsuarioMarket');
+
         document.getElementById("nav-btn-login").classList.remove("hidden");
         document.getElementById("nav-user-profile").classList.add("hidden");
         document.getElementById("nav-mis-coches").classList.add("hidden");
@@ -152,7 +165,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const passVal = document.getElementById("login-pass") ? document.getElementById("login-pass").value : "";
 
         try {
-            const response = await fetch("/api/login-usuario", {
+            // CAMBIO: Ruta de fetch relativa sin la barra '/' inicial para compatibilidad Localhost/Railway
+            const response = await fetch("api/login-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
                 body: JSON.stringify({ username: userVal, password: passVal })
@@ -178,7 +192,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const passVal = document.getElementById("register-pass") ? document.getElementById("register-pass").value : "";
 
         try {
-            const response = await fetch("/api/registrar-usuario", {
+            // CAMBIO: Ruta de fetch relativa sin la barra '/' inicial
+            const response = await fetch("api/registrar-usuario", {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
                 body: JSON.stringify({
@@ -220,6 +235,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const imagenesCargadas = await Promise.all(promesasImagenes);
 
+        // CAMBIO: Quitamos la inyección forzada del ID temporal 'Date.now()' para coches nuevos.
+        // MySQL generará el ID numérico real automáticamente mediante AUTO_INCREMENT.
         const nuevoCoche = {
             estado: "pendiente",
             marca: document.getElementById("pub-marca").value,
@@ -232,15 +249,17 @@ document.addEventListener("DOMContentLoaded", () => {
             transmision: document.getElementById("pub-transmision").value,
             imgs: imagenesCargadas,
             desc: document.getElementById("pub-desc").value,
-            vendedor: usuarioActual
+            vendedor: usuarioActual // Envía el nombre del usuario logueado recuperado de la memoria
         };
 
+        // Si estamos editando un coche existente, le adjuntamos su ID numérico real corto de MySQL
         if (idCocheEditando !== null) {
             nuevoCoche.id = idCocheEditando;
         }
 
         try {
-            const endpoint = idCocheEditando !== null ? "/api/modificar-coche" : "/api/crear-coches";
+            // CAMBIO: Rutas dinámicas relativas sin la barra '/' inicial
+            const endpoint = idCocheEditando !== null ? "api/modificar-coche" : "api/crear-coches";
             
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -251,6 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (response.ok && data.ok) {
                 alert("Vehículo procesado correctamente en el servidor remoto.");
+                // Recogemos el objeto coche con el ID definitivo asignado por la base de datos remota
                 const cocheProcesado = data.resultados ? data.resultados : nuevoCoche;
                 
                 if (idCocheEditando !== null) {
@@ -273,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const index = dbCoches.findIndex(c => c.id === idCocheEditando);
                 if (index !== -1) dbCoches[index] = nuevoCoche;
             } else {
-                nuevoCoche.id = Date.now();
+                nuevoCoche.id = Date.now(); // Fallback de emergencia local por si no hay servidor
                 dbCoches.push(nuevoCoche);
             }
             guardarDatos();
@@ -417,7 +437,8 @@ window.cargarMisCoches = function() {
 
 window.eliminarCoche = function(id) {
     if(confirm("¿Seguro que quieres eliminar esta publicación?")) {
-        fetch('/api/eliminar-coche', {
+        // CAMBIO: Usamos ruta relativa "api/eliminar-coche" (sin la barra '/') para evitar errores 404 en localhost
+        fetch('api/eliminar-coche', {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=UTF-8" },
             body: JSON.stringify({ id: id })
@@ -495,7 +516,8 @@ window.cambiarEstado = (id, nuevoEstado) => {
     if(coche) {
         const cocheActualizado = { ...coche, estado: nuevoEstado, desc: coche.desc || coche.descripcion, motor: coche.motor || coche.combustible, ubicacion: coche.ciudad || coche.ubicacion };
         
-        fetch('/api/modificar-coche', {
+        // CAMBIO: Ruta de fetch relativa "api/modificar-coche" para la pasarela de administración
+        fetch('api/modificar-coche', {
             method: "POST",
             headers: { "Content-Type": "application/json; charset=UTF-8" },
             body: JSON.stringify(cocheActualizado)
