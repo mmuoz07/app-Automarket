@@ -86,7 +86,7 @@ public class CrearCochesServlet extends HttpServlet {
                     imgs = gson.fromJson(datos.get("imgs"), tipoLista);
                 }
 
-                if(datos.has("vendedor") && !!datos.get("vendedor").isJsonNull()) {
+                if(datos.has("vendedor") && !datos.get("vendedor").isJsonNull()) {
                     vendedor = datos.get("vendedor").getAsString();
                 }
             }
